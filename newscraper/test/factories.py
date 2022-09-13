@@ -18,5 +18,5 @@ class ArticleFactory(factory.django.DjangoModelFactory):
     symbol = factory.Sequence(lambda n: f'AAPL{n}')
     title = faker.name()
     text = faker.text()
-    published_at = factory.fuzzy.FuzzyDatw(date(1984, 1, 1))
+    published_at = factory.fuzzy.FuzzyDate(date(1984, 1, 1))
     article_link = "http://articlelink.com"
