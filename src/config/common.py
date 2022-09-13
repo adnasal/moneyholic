@@ -52,6 +52,7 @@ INSTALLED_APPS = (
     'src.social',
     'src.files',
     'src.common',
+    'newscraper',
     # Third party optional apps
     # app must be placed somewhere after all the apps that are going to be generating activities
     # 'actstream',                  # activity stream
@@ -96,8 +97,12 @@ CORS_ORIGIN_ALLOW_ALL = True
 # CELERY
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_BROKER_URL = broker = os.getenv("BROKER_URL")
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_IMPORTS = [
+    'newscraper.tasks',
+]
 
 # Postgres
 DATABASES = {

@@ -23,6 +23,7 @@ django-money==2.0
 djangorestframework==3.12.4
 djangorestframework-simplejwt==4.7.1
 Markdown==3.3.4
+beautifulsoup4==4.10.0
 drf-yasg==1.20.0
 django-filter==2.4.0
 django-cors-headers==3.7.0
