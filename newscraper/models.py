@@ -83,5 +83,6 @@ class Article(models.Model):
     text = models.CharField(max_length=10000, blank=False)
     published_at = models.CharField(max_length=250)  # daytime and parse
     article_link = models.URLField(blank=False)
+    external_id = models.CharField(max_length=50, null=True)
     # created_at = models.DateTimeField(auto_now_add=True, null=True)
     # updated_at = models.DateTimeField(auto_now_add=True, null=True)

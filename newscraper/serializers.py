@@ -12,8 +12,6 @@ class SymbolSerializer(serializers.ModelSerializer):
             "symbol_class",
         ]
 
-        read_only_fields = ("symbol",)
-
 
 class ArticleSerializer(serializers.ModelSerializer):
 
@@ -23,13 +21,11 @@ class ArticleSerializer(serializers.ModelSerializer):
         fields = [
             "symbol",
             "title",
-            "author",
             "text",
-            "published_at" 
+            "published_at",
             "article_link",
-            "created_at",
-            "updated_at",
+            "external_id",
         ]
 
-        read_only_fields = ("symbol", "title", "author",)
+
 

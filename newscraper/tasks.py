@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
-from celery import task
-
+from celery import task, shared_task
+import html
 from .models import Article, Symbol
 from .serializers import ArticleSerializer, SymbolSerializer
 
@@ -12,10 +12,12 @@ def send_email_task():
 
 
 def create_default_symbols():
-
     symbols = Symbol.objects.all()
-    if len(symbols) is 0:
+    if not symbols:
         default_symbols = [
+            {
+                'symbol': 'INTC'
+            },
             {
                 'symbol': 'AAPL'
             },
@@ -24,9 +26,6 @@ def create_default_symbols():
             },
             {
                 'symbol': 'GC=F'
-            },
-            {
-                'symbol': 'INTC'
             }
         ]
         for i in default_symbols:
@@ -44,9 +43,10 @@ def collect_articles():
     other_params = '&region=US&lang=en-US'
 
     for j in symbols:
-        get_articles = requests.get(url + j.symbol + other_params, headers={'User-agent': 'Mozilla/5.0'})
-        soup = BeautifulSoup(get_articles.content, features='xml')
-        articles = soup.findAll('item')
+        get_articles = requests.get(url + j.symbol + other_params, headers={'User-agent': 'Mozilla/5.0'}).content
+
+        soup = BeautifulSoup(get_articles, 'xml')
+        articles = soup.find_all('item')
         articles_list = []
         symbol_id = j.id
 
@@ -55,6 +55,7 @@ def collect_articles():
                 'title': a.find('title').text,
                 'text': a.find('description').text,
                 'article_link': a.find('link').text,
+                'external_id': a.find('guid').text,
                 'published_at': a.find('pubDate').text,
                 'symbol': symbol_id
             }
@@ -63,9 +64,9 @@ def collect_articles():
 
         for i in articles_list:
 
-            existing_article = Article.objects.get_or_none(external_id=i.get('external_id'))
+            existing_article = Article.objects.filter(external_id=i.get('external_id'))
 
-            if existing_article is None:
+            if not existing_article:
                 serializer = ArticleSerializer(data=i)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
