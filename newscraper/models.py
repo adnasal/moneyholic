@@ -79,10 +79,7 @@ class Article(models.Model):
 
     symbol = models.ForeignKey(Symbol, related_name='article_symbol', on_delete=models.DO_NOTHING)
     title = models.TextField(max_length=250, blank=False)
-    # author = models.TextField(max_length=250, blank=False)
     text = models.CharField(max_length=10000, blank=False)
-    published_at = models.CharField(max_length=250)  # daytime and parse
+    published_at = models.CharField(max_length=250)
     article_link = models.URLField(blank=False)
     external_id = models.CharField(max_length=50, null=True)
-    # created_at = models.DateTimeField(auto_now_add=True, null=True)
-    # updated_at = models.DateTimeField(auto_now_add=True, null=True)

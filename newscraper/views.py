@@ -1,6 +1,10 @@
 import logging
 
+from rest_framework import pagination
 from rest_framework import status
+from django.shortcuts import (get_object_or_404,
+                              render,
+                              HttpResponseRedirect)
 from rest_framework.generics import (
     CreateAPIView, GenericAPIView, ListAPIView
 )
@@ -15,9 +19,16 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s: %(levelname)s: %(message)s')
 
 
+class StandardResultsSetPagination(pagination.PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 10
+
+
 class SymbolListView(ListAPIView):
     permission_classes = [AllowAny]
-    serializer_class = ArticleSerializer
+    serializer_class = SymbolSerializer
+   # pagination_class = StandardResultsSetPagination
 
     def list(self, request):
         serializer = SymbolSerializer(Symbol.objects.all(), many=True)
@@ -27,24 +38,38 @@ class SymbolListView(ListAPIView):
 
 class SymbolRemoveView(GenericAPIView):
     permission_classes = [AllowAny]
+    pagination_class = StandardResultsSetPagination
 
-    def post(self):
-        to_delete = self.request.data['symbol_id']
-        Symbol.objects.filter(id=to_delete).delete()
+    def delete(self, request, id):
+        get_object_or_404(Symbol, pk=id).delete()
 
-        return Response(
-            data={
-                "message": "You have successfully deleted the symbol."
-            },
-            status=status.HTTP_200_OK
-        )
+        return Response("Symbol is deleted", status.HTTP_200_OK)
+    #def delete(self, request, *args, **kwargs):
+     #   instance = self.get_object()
+      #  self.perform_destroy(instance)
+       # return Response(status=status.HTTP_204_NO_CONTENT)
+
+    #def post(self, id):
+
+        #to_delete = get_object_or_404(Symbol, id=id)
+        #to_delete.delete()
+
+       # return Response(
+        #    data={
+        #        "message": "You have successfully deleted the symbol."
+         #   },
+        #    status=status.HTTP_200_OK
+      #  )
 
 
 class SymbolAddView(CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = SymbolSerializer
 
-    def put(self, request):
+    def create(self, request):
+
+        queryset = Symbol.objects.all()
+
         serializer = SymbolSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -60,11 +85,16 @@ class ArticleListView(ListAPIView):
     def get_queryset(self, *args, **kwargs):
         queryset = Article.objects.all().order_by('symbol_id')
 
-        if self.request.query_params.get('symbol') is not None:
+        if self.request.query_params.get('symbol_class') is not None:
+            symbol_id = Symbol.objects.get(symbol_class=self.request.query_params.get('symbol_class'))
+
+            print(self.request.query_params.get('symbol_class'))
+            query_set = queryset.filter(symbol=symbol_id.id)
+        elif self.request.query_params.get('symbol') is not None:
             symbol_id = Symbol.objects.get(symbol=self.request.query_params.get('symbol'))
 
             print(self.request.query_params.get('symbol'))
-            article_list = queryset.filter(symbol=symbol_id.id)
+            query_set = queryset.filter(symbol=symbol_id.id)
         else:
-            article_list = queryset.all()
-        return article_list
+            query_set = queryset.all()
+        return query_set
