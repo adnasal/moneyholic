@@ -1,8 +1,16 @@
 from django.db import models
 
 
-class Symbol(models.Model):
+class GetOrNoneManager(models.Manager):
+    def get_or_none(self, **kwargs):
+        try:
+            return self.get(**kwargs)
+        except self.model.DoesNotExist:
+            return None
 
+
+class Symbol(models.Model):
+    objects = GetOrNoneManager()
     symbol = models.CharField(max_length=8, blank=False, null=False, default=None)
 
     CLASS_A = 0
@@ -76,13 +84,10 @@ class Symbol(models.Model):
 
 
 class Article(models.Model):
-
+    objects = GetOrNoneManager()
     symbol = models.ForeignKey(Symbol, related_name='article_symbol', on_delete=models.DO_NOTHING)
     title = models.TextField(max_length=250, blank=False)
-    # author = models.TextField(max_length=250, blank=False)
     text = models.CharField(max_length=10000, blank=False)
-    published_at = models.CharField(max_length=250)  # daytime and parse
+    published_at = models.CharField(max_length=250)
     article_link = models.URLField(blank=False)
     external_id = models.CharField(max_length=50, null=True)
-    # created_at = models.DateTimeField(auto_now_add=True, null=True)
-    # updated_at = models.DateTimeField(auto_now_add=True, null=True)

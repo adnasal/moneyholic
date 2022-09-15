@@ -1,11 +1,10 @@
 from rest_framework import serializers
+
 from .models import Symbol, Article
 
 
 class SymbolSerializer(serializers.ModelSerializer):
-
     class Meta:
-
         model = Symbol
         fields = [
             "symbol",
@@ -14,9 +13,7 @@ class SymbolSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-
     class Meta:
-
         model = Article
         fields = [
             "symbol",
@@ -26,6 +23,3 @@ class ArticleSerializer(serializers.ModelSerializer):
             "article_link",
             "external_id",
         ]
-
-
-
