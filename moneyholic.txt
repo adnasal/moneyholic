@@ -1,0 +1,61 @@
+Moneyholic is Django based REST api service for financial news. Service has two parts: REST api service and scraping service.
+
+REST api is primarily used  for fetching data and scraping service collects and stores data from Yahoo finance site.
+
+Moneyholic works with help of five different services, which can be seen in docker-compose.yml file:
+
+- db (Postgresql)
+- web
+- worker (Celery)
+- scheduler (celery.beat)
+- message broker (Redis)
+
+
+All needed environment variables can be found in .env file.
+
+Project is dockerized; services are run in Docker containers, virtual environment and all the requirements can be found under /requirements directory.
+
+This api collects all kinds of financial news form Yahoo Finance site, but primarily has 4 different symbols news can be
+distincted upon: AATL, TWTR, GC=F and INTC.
+
+This api consists of next endpoints (url.py), Postman collection tested:
+
+- News
+- News Per Symbol
+- News Per Symbol Class
+- List Symbols
+- Add Symbol
+- Remove Symbol*
+- Get Article
+- Remove Article
+
+* Symbol can be removed only if all of its connected articles are removed.
+
+GetOrNone manager was implemented in order to avoid using filter method in cases where None response was desired and there was only one object to work with.
+
+Validations were done on views, such as:
+
+- Already existing symbol cannot be added
+- Article/symbol that does not exist cannot be removed
+- Appropriate messages when errors happen
+- Cannot delete default symbols (AATL,TWTR, GC=F and INTC)
+
+Pagination is implemented, and can be checked by setting page query param, for example:
+
+http://127.0.0.1:8000/api/v1/news/?symbol=TWTR&&page=2
+
+This would return all the news with symbol TWTR positioned on page 2.
+
+Celery is used for asynchronous tasks and periodic scraping every 15 minutes. Library used for scraping is BeautifulSoup4.
+
+Swagger, as html documentation page, is also implemented within the project, and can be visited on:
+
+127.0.0.1:8000/swagger
+
+Unit tests and model factories for most important code parts are written and can be run by:
+
+python manage.py newscraper.test.test_models
+python manage.py newscraper.test.test_views
+python manage.py newscraper.test.test_pagination
+
+
