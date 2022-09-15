@@ -1,14 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
-from celery import task, shared_task
-import html
+from celery import task
+
 from .models import Article, Symbol
 from .serializers import ArticleSerializer, SymbolSerializer
-
-
-@task(name='TestTask')
-def send_email_task():
-    return 3+3
 
 
 def create_default_symbols():
@@ -28,8 +23,8 @@ def create_default_symbols():
                 'symbol': 'GC=F'
             }
         ]
-        for i in default_symbols:
-            serializer = SymbolSerializer(data=i)
+        for new_symbol in default_symbols:
+            serializer = SymbolSerializer(data=new_symbol)
             serializer.is_valid(raise_exception=True)
             serializer.save()
 
@@ -42,13 +37,12 @@ def collect_articles():
     url = 'https://feeds.finance.yahoo.com/rss/2.0/headline?s='
     other_params = '&region=US&lang=en-US'
 
-    for j in symbols:
-        get_articles = requests.get(url + j.symbol + other_params, headers={'User-agent': 'Mozilla/5.0'}).content
-
+    for s in symbols:
+        get_articles = requests.get(''.join([url, s.symbol, other_params]), headers={'User-agent': 'Mozilla/5.0'}).content
         soup = BeautifulSoup(get_articles, 'xml')
         articles = soup.find_all('item')
         articles_list = []
-        symbol_id = j.id
+        symbol_id = s.id
 
         for a in articles:
             article = {

@@ -26,6 +26,3 @@ class ArticleSerializer(serializers.ModelSerializer):
             "article_link",
             "external_id",
         ]
-
-
-
