@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s: %(me
 
 
 class CustomPagination(pagination.PageNumberPagination):
-    page_size = 5
+    page_size = 4
     page_size_query_param = 'page_size'
     max_page_size = 12
 
@@ -44,7 +44,7 @@ class SymbolRemoveView(GenericAPIView):
         queryset = Symbol.objects.filter(id=to_delete)
 
         if not queryset:
-            return Response({'Failure': 'Symbol already deleted.'}, status.HTTP_200_OK)
+            return Response({'Failure': 'Symbol already deleted.'}, status.HTTP_404_NOT_FOUND)
         else:
             if queryset in {'AAPL', 'TWTR', 'GC=F', 'INTC'}:
                 return Response(
@@ -126,7 +126,7 @@ class ArticleView(GenericAPIView):
         try:
             article = Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({'Failure': 'Article does not exist.'}, status.HTTP_200_OK)
+            return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
         else:
             response = Article.objects.get_or_none(id=article.pk)
             return HttpResponse(response, content_type="application/json")
@@ -140,7 +140,8 @@ class ArticleRemoveView(GenericAPIView):
         try:
             article = Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({'Failure': 'Article does not exist or has been already removed.'}, status.HTTP_200_OK)
+            return Response({'Failure': 'Article does not exist or has been already removed.'},
+                            status.HTTP_404_NOT_FOUND)
         else:
             response = Article.objects.get_or_none(id=article.pk)
             response.delete()
