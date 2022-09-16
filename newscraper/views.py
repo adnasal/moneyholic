@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s: %(me
 
 
 class CustomPagination(pagination.PageNumberPagination):
-    page_size = 5
+    page_size = 4
     page_size_query_param = 'page_size'
     max_page_size = 12
 
@@ -140,7 +140,8 @@ class ArticleRemoveView(GenericAPIView):
         try:
             article = Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            return Response({'Failure': 'Article does not exist or has been already removed.'}, status.HTTP_404_NOT_FOUND)
+            return Response({'Failure': 'Article does not exist or has been already removed.'},
+                            status.HTTP_404_NOT_FOUND)
         else:
             response = Article.objects.get_or_none(id=article.pk)
             response.delete()
