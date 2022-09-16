@@ -57,5 +57,6 @@ Unit tests and model factories for most important code parts are written and can
 python manage.py newscraper.test.test_models
 python manage.py newscraper.test.test_views
 python manage.py newscraper.test.test_pagination
+python manage.py newscraper.test.test_serializers
 
 
