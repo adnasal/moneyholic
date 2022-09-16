@@ -31,8 +31,8 @@ urlpatterns = [
     path('summernote/', include('django_summernote.urls')),
     # api
     url(r'^api/v1/news', ArticleListView.as_view(), name='news'),
-    url('api/v1/remove_article/', ArticleRemoveView.as_view(), name='remove_article'),
-    url('api/v1/article/', ArticleView.as_view(), name='get_article'),
+    url('api/v1/remove_article/(?P<pk>\d+)/$', ArticleRemoveView.as_view(), name='remove_article'),
+    url('api/v1/article/(?P<pk>\d+)/$', ArticleView.as_view(), name='get_article'),
     url(r'^api/v1/add_symbol', SymbolAddView.as_view(), name='add_symbol'),
     url('api/v1/remove_symbol/', SymbolRemoveView.as_view(), name='remove_symbol'),
     url('api/v1/update_symbol/', SymbolUpdateView.as_view(), name='update_symbol'),

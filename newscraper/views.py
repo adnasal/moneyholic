@@ -122,13 +122,13 @@ class ArticleView(GenericAPIView):
     permission_classes = [AllowAny]
     queryset = Article.objects.all()
 
-    def get(self, id):
-        to_get = self.request.data['article_id']
-        response = Article.objects.get_or_none(id=to_get)
-
-        if response is None:
-            return HttpResponse('Article does not exist.')
+    def get(self, request, pk=None):
+        try:
+            article = Article.objects.get(pk=pk)
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'}, status.HTTP_200_OK)
         else:
+            response = Article.objects.get_or_none(id=article.pk)
             return HttpResponse(response, content_type="application/json")
 
 
@@ -136,15 +136,14 @@ class ArticleRemoveView(GenericAPIView):
     permission_classes = [AllowAny]
     queryset = Article.objects.all()
 
-    def post(self, id):
-        to_delete = self.request.data['article_id']
-        queryset = Article.objects.filter(id=to_delete)
-
-        if not queryset:
-            return Response({'Failure': 'Article already deleted.'}, status.HTTP_200_OK)
+    def post(self, request, pk=None):
+        try:
+            article = Article.objects.get(pk=pk)
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist or has been already removed.'}, status.HTTP_200_OK)
         else:
-            queryset.delete()
-
+            response = Article.objects.get_or_none(id=article.pk)
+            response.delete()
             return Response(
                 data={
                     "message": "You have successfully deleted desired article."
