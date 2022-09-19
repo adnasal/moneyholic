@@ -1,40 +1,17 @@
 import requests
 from bs4 import BeautifulSoup
 from celery import task
+from django.conf import settings
 
 from .models import Article, Symbol
-from .serializers import ArticleSerializer, SymbolSerializer
+from .serializers import ArticleSerializer
 
 
-def create_default_symbols():
-    symbols = Symbol.objects.all()
-    if not symbols:
-        default_symbols = [
-            {
-                'symbol': 'INTC'
-            },
-            {
-                'symbol': 'AAPL'
-            },
-            {
-                'symbol': 'TWTR'
-            },
-            {
-                'symbol': 'GC=F'
-            }
-        ]
-        for new_symbol in default_symbols:
-            serializer = SymbolSerializer(data=new_symbol)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-
-
-@task(name='CollectArticles')
-def collect_articles() -> str:
-    create_default_symbols()
-    symbols = Symbol.objects.all()
-    url: str = 'https://feeds.finance.yahoo.com/rss/2.0/headline?s='
-    other_params = '&region=US&lang=en-US'
+@task(name='CollectArticlesYahoo')
+def collect_articles_yahoo() -> str:
+    symbols = Symbol.objects.filter(is_enabled=True)
+    url: str = settings.SCRAPING_URL
+    other_params = settings.US
 
     if symbols:
         for symbol in symbols:

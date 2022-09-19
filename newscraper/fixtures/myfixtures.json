@@ -1,0 +1,34 @@
+[
+  {
+    "model": "newscraper.Symbol",
+    "fields": {
+      "symbol": "INTC",
+      "symbol_class": "1",
+      "is_enabled": "True"
+    }
+  },
+  {
+    "model": "newscraper.Symbol",
+    "fields": {
+      "symbol": "AAPL",
+      "symbol_class": "1",
+      "is_enabled": "True"
+    }
+  },
+  {
+    "model": "newscraper.Symbol",
+    "fields": {
+      "symbol": "TWTR",
+      "symbol_class": "1",
+      "is_enabled": "True"
+    }
+  },
+  {
+    "model": "newscraper.Symbol",
+    "fields": {
+      "symbol": "GC=F",
+      "symbol_class": "1",
+      "is_enabled": "True"
+    }
+  }
+]

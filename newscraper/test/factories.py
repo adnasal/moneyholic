@@ -12,6 +12,7 @@ class SymbolFactory(factory.django.DjangoModelFactory):
 
     symbol = 'AATL'
     symbol_class = factory.Sequence(lambda n: f'1{n}')
+    is_enabled = False
 
 
 class ArticleFactory(factory.django.DjangoModelFactory):

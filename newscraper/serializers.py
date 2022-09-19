@@ -9,7 +9,9 @@ class SymbolSerializer(serializers.ModelSerializer):
         fields = [
             "symbol",
             "symbol_class",
+            "is_enabled",
         ]
+        depth = 1
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -23,3 +25,4 @@ class ArticleSerializer(serializers.ModelSerializer):
             "article_link",
             "external_id",
         ]
+        depth = 1

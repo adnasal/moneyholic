@@ -19,6 +19,16 @@ class TestSymbol(TestCase):
 
         print(len(symbol_db))
 
+    def test_is_enabled_label(self):
+        symbol = self.symbol
+        field_label = symbol._meta.get_field('is_enabled').verbose_name
+        self.assertEqual(field_label, 'is enabled')
+
+    def test_default_is_enabled_true(self):
+        symbol = self.symbol
+        is_enabled = symbol._meta.get_field('is_enabled')
+        self.assertTrue(is_enabled)
+
 
 class TestArticle(TestCase):
     article = ArticleFactory()

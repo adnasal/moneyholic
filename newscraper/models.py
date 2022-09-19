@@ -12,6 +12,7 @@ class GetOrNoneManager(models.Manager):
 class Symbol(models.Model):
     objects = GetOrNoneManager()
     symbol = models.CharField(max_length=8, blank=False, null=False, default=None)
+    is_enabled = models.BooleanField(default=True)
 
     CLASS_A = 0
     CLASS_B = 1
