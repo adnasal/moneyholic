@@ -12,7 +12,7 @@ class TestSymbol(TestCase):
         self.assertTrue(isinstance(symbol_test, Symbol))
 
     def test_symbol_default_class(self):
-        self.assertEqual(self.symbol.symbol_class, str(Symbol.CLASS_L))
+        self.assertEqual(self.symbol.symbol_class, str(Symbol.CLASS_M))
 
     def test_symbol_model_name(self):
         symbol_db = Symbol.objects.all()

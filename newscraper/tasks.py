@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from celery import task
 from django.conf import settings
+from datetime import datetime
 
 from .models import Article, Symbol
 from .serializers import ArticleSerializer
@@ -28,8 +29,8 @@ def collect_articles_yahoo() -> str:
                     'text': article.find('description').text,
                     'article_link': article.find('link').text,
                     'external_id': article.find('guid').text,
-                    'published_at': article.find('pubDate').text,
-                    'symbol': symbol_id
+                    'published_at': datetime.strptime(article.find('pubDate').text, '%a, %d %b %Y %H:%M:%S %z'),
+                    'symbol': symbol_id,
                 }
 
                 articles_list.append(article)

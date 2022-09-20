@@ -11,10 +11,33 @@ class SymbolSerializer(serializers.ModelSerializer):
             "symbol_class",
             "is_enabled",
         ]
+
+
+class SymbolViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Symbol
+        fields = [
+            "symbol",
+            "symbol_class",
+            "is_enabled",
+        ]
         depth = 1
 
 
 class ArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Article
+        fields = [
+            "symbol",
+            "title",
+            "text",
+            "published_at",
+            "article_link",
+            "external_id",
+        ]
+
+
+class ArticleViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
         fields = [

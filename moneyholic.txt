@@ -31,6 +31,8 @@ This api consists of next endpoints (url.py), Postman collection tested:
 
 * Symbol can be removed only if all of its connected articles are removed.
 
+Symbol can be enabled or disabled. Only enabled symbols' articles will be shown on news feed.
+
 GetOrNone manager was implemented in order to avoid using filter method in cases where None response was desired and there was only one object to work with.
 
 Validations were done on views, such as:
@@ -52,11 +54,12 @@ Swagger, as html documentation page, is also implemented within the project, and
 
 127.0.0.1:8000/swagger
 
+Admin page for this app can be visited on:
+
+127.0.0.1:8000/admin/newscraper
+
 Unit tests and model factories for most important code parts are written and can be run by:
 
-python manage.py newscraper.test.test_models
-python manage.py newscraper.test.test_views
-python manage.py newscraper.test.test_pagination
-python manage.py newscraper.test.test_serializers
+python manage.py newscraper.test
 
 

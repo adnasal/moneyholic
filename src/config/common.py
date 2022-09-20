@@ -88,7 +88,7 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379')
 # Scraper
 SCRAPING_URL = 'https://feeds.finance.yahoo.com/rss/2.0/headline?s='
 US = '&region=US&lang=en-US'
-
+USE_TZ = True
 ADMINS = ()
 
 # Sentry
