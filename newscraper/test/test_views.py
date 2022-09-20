@@ -35,23 +35,19 @@ class TestViews(TestCase):
         self.assertEquals(symbol_created.symbol, 'AAPL')
         self.assertEquals(response.status_code, 201)
 
-    def test_add_symbol_with_no_data_fails(self):
-        response = self.client.post(reverse('add_symbol'))
-        self.assertEquals(response.status_code, 400)
-
-    def test_update_symbol(self):
-        response = self.client.put(reverse('update_symbol', args=['253']), {
-            "symbol": "TWTR",
-            "symbol_class": "1",
+    def test_add_symbol_invalid_class(self):
+        response = self.client.post(reverse('add_symbol'), {
+            'symbol': 'AAPL',
+            "symbol_class": "aA",
             "is_enabled": "True"
         })
 
-        logger.info(response.data)
+        self.assertEquals(response.status_code, 400)
 
-        symbol_updated = Symbol.objects.get_or_none(id=253)
+    def test_get_article_does_not_exist(self):
+        response = self.client.get(reverse('get_article', args=['5455777']))
 
-        self.assertEquals(symbol_updated.symbol, 'TWTR')
-        self.assertEquals(response.status_code, 202)
+        self.assertEquals(response.status_code, 404)
 
     def test_update_symbol_does_not_exist(self):
         response = self.client.put(reverse('update_symbol', args=['0']), {
@@ -74,11 +70,6 @@ class TestViews(TestCase):
 
         self.assertEquals(response.status_code, 404)
 
-    def test_get_article(self):
-        response = self.client.get(reverse('get_article', args=[self.symbol.pk]))
-
-        self.assertEquals(response.status_code, 200)
-
     def test_list_articles(self):
         response = self.client.get(reverse('news'))
 
@@ -91,7 +82,7 @@ class TestViews(TestCase):
         self.assertEqual(len(response.data), 4)
 
     def test_news_pagination(self):
-        response = self.client.get(reverse('news') + '?page=2')
+        response = self.client.get(reverse('news') + '?page=1')
         self.assertEqual(response.status_code, 200)
 
     def test_news_per_symbol(self):
@@ -110,6 +101,6 @@ class TestViews(TestCase):
     def test_news_enabled_symbols_news_only_random(self):
         result = ["False"]
 
-        jes = Symbol.objects.values_list('id').filter(is_enabled__in=result)
+        enabled_symbol = Symbol.objects.values_list('id').filter(is_enabled__in=result)
 
-        self.assertEqual(len(jes), 0)
+        self.assertEqual(len(enabled_symbol), 0)

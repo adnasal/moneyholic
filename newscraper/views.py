@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Symbol, Article
-from .serializers import ArticleSerializer, SymbolSerializer
+from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
@@ -24,7 +24,7 @@ class CustomPagination(pagination.PageNumberPagination):
 
 class SymbolListView(ListAPIView):
     permission_classes = [AllowAny]
-    serializer_class = SymbolSerializer
+    serializer_class = SymbolViewSerializer
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
@@ -102,21 +102,24 @@ class SymbolUpdateView(APIView):
 
 class ArticleListView(ListAPIView):
     permission_classes = [AllowAny]
-    serializer_class = ArticleSerializer
+    serializer_class = ArticleViewSerializer
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
         queryset = Article.objects.all().order_by('symbol_id')
+        symbol = Symbol.objects.filter(is_enabled=True).values_list('symbol', flat=True)
+        symbol_class = Symbol.objects.filter(is_enabled=True).values_list('symbol_class', flat=True)
         query_set = None
 
-        if self.request.query_params.get('symbol_class') is not None:
+        if self.request.query_params.get('symbol_class') is not None and self.request.query_params.get(
+                'symbol_class') in symbol_class:
             symbol_id = Symbol.objects.filter(symbol_class=self.request.query_params.get('symbol_class'),
                                               is_enabled=True)
 
             print(self.request.query_params.get('symbol_class'))
             for symbol in symbol_id:
                 query_set = queryset.filter(symbol=symbol)
-        elif self.request.query_params.get('symbol') is not None:
+        elif self.request.query_params.get('symbol') is not None and self.request.query_params.get('symbol') in symbol:
             symbol_id = Symbol.objects.get(symbol=self.request.query_params.get('symbol'), is_enabled=True)
 
             print(self.request.query_params.get('symbol'))
@@ -130,7 +133,7 @@ class ArticleListView(ListAPIView):
 
 class ArticleView(GenericAPIView):
     permission_classes = [AllowAny]
-    serializer_class = ArticleSerializer
+    serializer_class = ArticleViewSerializer
 
     def get(self, request, pk=None):
         try:
@@ -139,7 +142,7 @@ class ArticleView(GenericAPIView):
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
         else:
             queryset = Article.objects.get(pk=pk)
-            serializer = ArticleSerializer(queryset)
+            serializer = ArticleViewSerializer(queryset)
             data = serializer.data
 
             return Response(data, content_type="application/json")
