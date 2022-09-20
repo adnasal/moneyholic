@@ -1,10 +1,9 @@
 import logging
 
-from django.http import HttpResponse
 from rest_framework import pagination
 from rest_framework import status
 from rest_framework.generics import (
-    CreateAPIView, GenericAPIView, ListAPIView, get_object_or_404
+    CreateAPIView, GenericAPIView, DestroyAPIView, ListAPIView, get_object_or_404
 )
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -29,7 +28,7 @@ class SymbolListView(ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
-        queryset = Symbol.objects.all()
+        queryset = Symbol.objects.filter(is_enabled=True)
 
         return queryset
 
@@ -84,13 +83,21 @@ class SymbolAddView(CreateAPIView):
 
 
 class SymbolUpdateView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = SymbolSerializer
 
-    def put(self, request, id):
-        serializer = SymbolSerializer(instance=get_object_or_404(Symbol, pk=id), data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+    def put(self, request, pk):
+        try:
+            Symbol.objects.get(pk=pk)
+        except Symbol.DoesNotExist:
+            return Response({'Failure': 'Symbol does not exist.'},
+                            status.HTTP_404_NOT_FOUND)
+        else:
+            serializer = SymbolSerializer(instance=get_object_or_404(Symbol, pk=pk), data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
 
-        return Response(serializer.validated_data, status.HTTP_200_OK)
+            return Response(serializer.validated_data, status.HTTP_202_ACCEPTED)
 
 
 class ArticleListView(ListAPIView):
@@ -100,18 +107,21 @@ class ArticleListView(ListAPIView):
 
     def get_queryset(self, *args, **kwargs):
         queryset = Article.objects.all().order_by('symbol_id')
+        query_set = None
 
         if self.request.query_params.get('symbol_class') is not None:
-            symbol_id = Symbol.objects.filter(symbol_class=self.request.query_params.get('symbol_class'))
+            symbol_id = Symbol.objects.filter(symbol_class=self.request.query_params.get('symbol_class'),
+                                              is_enabled=True)
 
             print(self.request.query_params.get('symbol_class'))
-            for s in symbol_id:
-                query_set = queryset.filter(symbol=s)
+            for symbol in symbol_id:
+                query_set = queryset.filter(symbol=symbol)
         elif self.request.query_params.get('symbol') is not None:
-            symbol_id = Symbol.objects.get(symbol=self.request.query_params.get('symbol'))
+            symbol_id = Symbol.objects.get(symbol=self.request.query_params.get('symbol'), is_enabled=True)
 
             print(self.request.query_params.get('symbol'))
-            query_set = queryset.filter(symbol=symbol_id.id)
+            query_set = queryset.filter(symbol=symbol_id)
+
         else:
             query_set = queryset.all()
 
@@ -120,30 +130,33 @@ class ArticleListView(ListAPIView):
 
 class ArticleView(GenericAPIView):
     permission_classes = [AllowAny]
-    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
 
     def get(self, request, pk=None):
         try:
-            article = Article.objects.get(pk=pk)
+            Article.objects.get(pk=pk)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
         else:
-            response = Article.objects.get_or_none(id=article.pk)
-            return HttpResponse(response, content_type="application/json")
+            queryset = Article.objects.get(pk=pk)
+            serializer = ArticleSerializer(queryset)
+            data = serializer.data
+
+            return Response(data, content_type="application/json")
 
 
-class ArticleRemoveView(GenericAPIView):
+class ArticleRemoveView(DestroyAPIView):
     permission_classes = [AllowAny]
     queryset = Article.objects.all()
 
-    def post(self, request, pk=None):
+    def delete(self, request, pk=None, **kwargs):
         try:
-            article = Article.objects.get(pk=pk)
+            Article.objects.get(pk=pk)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist or has been already removed.'},
                             status.HTTP_404_NOT_FOUND)
         else:
-            response = Article.objects.get_or_none(id=article.pk)
+            response = Article.objects.get_or_none(id=pk)
             response.delete()
             return Response(
                 data={
