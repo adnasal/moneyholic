@@ -85,12 +85,40 @@ class TestViews(TestCase):
         response = self.client.get(reverse('news') + '?page=1')
         self.assertEqual(response.status_code, 200)
 
+    def test_recent_news_pagination(self):
+        response = self.client.get(reverse('recent_news') + '?page=1')
+        self.assertEqual(response.status_code, 200)
+
     def test_news_per_symbol(self):
         response = self.client.get(reverse('news') + '?symbol=TWTR')
         self.assertEqual(response.status_code, 200)
 
     def test_news_per_symbol_class(self):
         response = self.client.get(reverse('news') + '?symbol_class=1')
+        self.assertEqual(response.status_code, 200)
+
+    def test_recent_news(self):
+        response = self.client.get(reverse('recent_news'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_news_per_search(self):
+        response = self.client.get(reverse('news') + '?search=Apple')
+        self.assertEqual(response.status_code, 200)
+
+    def test_news_per_date(self):
+        response = self.client.get(reverse('news') + '?date=2022-09-10')
+        self.assertEqual(response.status_code, 200)
+
+    def test_news_per_date_wrong_format(self):
+        response = self.client.get(reverse('news') + '?date=2022/09-10')
+        self.assertEqual(response.status_code, 400)
+
+    def test_news_per_date_to(self):
+        response = self.client.get(reverse('news') + '?date_to=2022-09-10')
+        self.assertEqual(response.status_code, 200)
+
+    def test_news_per_date_from(self):
+        response = self.client.get(reverse('news') + '?date_from=2022-09-10')
         self.assertEqual(response.status_code, 200)
 
     def test_news_enabled_symbols_only(self):
