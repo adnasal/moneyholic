@@ -23,6 +23,7 @@ This api consists of next endpoints (url.py), Postman collection tested:
 - News
 - News Per Symbol
 - News Per Symbol Class
+- News Per Search, date, date_from, date_to
 - List Symbols
 - Add Symbol
 - Remove Symbol*

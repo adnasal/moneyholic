@@ -9,7 +9,7 @@ from drf_yasg.views import get_schema_view
 from rest_framework.routers import DefaultRouter
 
 from newscraper.views import SymbolRemoveView, SymbolAddView, SymbolListView, ArticleListView, ArticleRemoveView, \
-    SymbolUpdateView, ArticleView
+    SymbolUpdateView, ArticleView, ArticleRecentNewsView
 from src.files.urls import files_router
 from src.users.urls import users_router
 
@@ -31,6 +31,7 @@ urlpatterns = [
                   path('summernote/', include('django_summernote.urls')),
                   # api
                   url(r'^api/v1/news', ArticleListView.as_view(), name='news'),
+                  url(r'^api/v1/news/recent', ArticleRecentNewsView.as_view(), name='recent_news'),
                   url('api/v1/remove_article/(?P<pk>\d+)/$', ArticleRemoveView.as_view(), name='remove_article'),
                   url('api/v1/article/(?P<pk>\d+)/$', ArticleView.as_view(), name='get_article'),
                   url(r'^api/v1/add_symbol', SymbolAddView.as_view(), name='add_symbol'),

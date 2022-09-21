@@ -1,7 +1,9 @@
 import logging
+from datetime import datetime
 
+from django.db.models import Q
 from rest_framework import pagination
-from rest_framework import status
+from rest_framework import status, filters, serializers, fields
 from rest_framework.generics import (
     CreateAPIView, GenericAPIView, DestroyAPIView, ListAPIView, get_object_or_404
 )
@@ -20,6 +22,16 @@ class CustomPagination(pagination.PageNumberPagination):
     page_size = 4
     page_size_query_param = 'page_size'
     max_page_size = 12
+
+
+class ValidateQueryParams(serializers.Serializer):
+    search = fields.RegexField(
+        "^[\u0621-\u064A\u0660-\u0669 a-zA-Z0-9]{3,30}$", required=False
+    )
+
+    date = fields.DateField(format='%Y-%m-%d', required=False)
+    date_from = fields.DateField(format='%Y-%m-%d', required=False)
+    date_to = fields.DateField(format='%Y-%m-%d', required=False)
 
 
 class SymbolListView(ListAPIView):
@@ -104,25 +116,46 @@ class ArticleListView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArticleViewSerializer
     pagination_class = CustomPagination
+    search_fields = ['title', 'text', 'published_at']
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
 
     def get_queryset(self, *args, **kwargs):
-        queryset = Article.objects.all().order_by('symbol_id')
+        param = self.request.query_params
+
+        query_params = ValidateQueryParams(data=param)
+        query_params.is_valid(raise_exception=True)
+
+        queryset = Article.objects.filter(symbol__is_enabled=True).order_by('symbol_id')
+
         symbol = Symbol.objects.filter(is_enabled=True).values_list('symbol', flat=True)
         symbol_class = Symbol.objects.filter(is_enabled=True).values_list('symbol_class', flat=True)
         query_set = None
 
-        if self.request.query_params.get('symbol_class') is not None and self.request.query_params.get(
-                'symbol_class') in symbol_class:
-            symbol_id = Symbol.objects.filter(symbol_class=self.request.query_params.get('symbol_class'),
-                                              is_enabled=True)
+        if param.get('search') is not None:
 
-            print(self.request.query_params.get('symbol_class'))
+            search = param.get('search')
+            query_set = Article.objects.filter(Q(title__contains=search) | Q(text__contains=search))
+
+        elif param.get('date_from') is not None and param.get('date_to') is not None:
+            date_from = datetime.strptime(param.get('date_from'), '%Y-%m-%d')
+            date_to = datetime.strptime(param.get('date_to'), '%Y-%m-%d')
+            query_set = Article.objects.filter(published_at__gte=date_from, published_at__lte=date_to)
+
+        elif param.get('date') is not None:
+            date = datetime.strptime(param.get('date'), '%Y-%m-%d')
+            query_set = Article.objects.filter(published_at__contains=date)
+
+        elif param.get('symbol_class') is not None and param.get(
+                'symbol_class') in symbol_class:
+            symbol_id = Symbol.objects.filter(symbol_class=param.get('symbol_class'))
+
+            print(param.get('symbol_class'))
             for symbol in symbol_id:
                 query_set = queryset.filter(symbol=symbol)
-        elif self.request.query_params.get('symbol') is not None and self.request.query_params.get('symbol') in symbol:
-            symbol_id = Symbol.objects.get(symbol=self.request.query_params.get('symbol'), is_enabled=True)
+        elif param.get('symbol') is not None and param.get('symbol') in symbol:
+            symbol_id = Symbol.objects.get(symbol=param.get('symbol'))
 
-            print(self.request.query_params.get('symbol'))
+            print(param.get('symbol'))
             query_set = queryset.filter(symbol=symbol_id)
 
         else:
@@ -167,3 +200,18 @@ class ArticleRemoveView(DestroyAPIView):
                 },
                 status=status.HTTP_200_OK
             )
+
+
+class ArticleRecentNewsView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleViewSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        today = datetime.date.today()
+        first = today.replace(day=1)
+        last_month = first - datetime.timedelta(days=1)
+
+        queryset = Article.objects.filter(date__range=[last_month, datetime.now()], symbol__is_enabled=True)
+
+        return queryset

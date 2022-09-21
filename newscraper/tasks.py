@@ -24,6 +24,7 @@ def collect_articles_yahoo() -> str:
             symbol_id = symbol.id
 
             for article in articles:
+
                 article = {
                     'title': article.find('title').text,
                     'text': article.find('description').text,
