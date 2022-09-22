@@ -1,7 +1,11 @@
 import logging
 from datetime import datetime
+import requests
 
+from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db.models import Q
+from django.views.decorators.cache import cache_page
 from rest_framework import pagination
 from rest_framework import status, filters, serializers, fields
 from rest_framework.generics import (
@@ -13,6 +17,8 @@ from rest_framework.views import APIView
 
 from .models import Symbol, Article
 from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer
+
+CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
@@ -37,6 +43,7 @@ class ValidateQueryParams(serializers.Serializer):
 class SymbolListView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = SymbolViewSerializer
+    ordering = ['-id']
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
@@ -115,10 +122,12 @@ class SymbolUpdateView(APIView):
 class ArticleListView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArticleViewSerializer
+    ordering = ['-id']
     pagination_class = CustomPagination
     search_fields = ['title', 'text', 'published_at']
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
 
+    # @cache_page(CACHE_TTL)
     def get_queryset(self, *args, **kwargs):
         param = self.request.query_params
 
@@ -174,9 +183,28 @@ class ArticleView(GenericAPIView):
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
         else:
-            queryset = Article.objects.get(pk=pk)
-            serializer = ArticleViewSerializer(queryset)
+
+            article = Article.objects.get(pk=pk)
+            serializer = ArticleViewSerializer(article)
             data = serializer.data
+
+            recently_viewed_products = None
+
+            if 'recently_viewed' in request.session:
+                if article.pk in request.session['recently_viewed']:
+                    request.session['recently_viewed'].remove(article.pk)
+
+                articles = Article.objects.filter(pk__in=request.session['recently_viewed'])
+                recently_viewed_products = sorted(articles,
+                                                  key=lambda x: request.session['recently_viewed'].index(x.pk)
+                                                  )
+                request.session['recently_viewed'].insert(0, article.pk)
+                if len(request.session['recently_viewed']) > 5:
+                    request.session['recently_viewed'].pop()
+            else:
+                request.session['recently_viewed'] = [article.pk]
+
+            request.session.modified = True
 
             return Response(data, content_type="application/json")
 
@@ -205,6 +233,7 @@ class ArticleRemoveView(DestroyAPIView):
 class ArticleRecentNewsView(ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArticleViewSerializer
+    ordering = ['-id']
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
