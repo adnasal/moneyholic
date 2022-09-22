@@ -50,7 +50,7 @@ services:
 
   redis:
     image: redis:alpine
-    restart: unless-stopped
+    restart: always
     ports:
       - "6379:6379"
 
