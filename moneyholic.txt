@@ -21,11 +21,13 @@ distincted upon: AATL, TWTR, GC=F and INTC.
 This api consists of next endpoints (url.py), Postman collection tested:
 
 - News
+- Recent News
 - News Per Symbol
 - News Per Symbol Class
-- News Per Search, date, date_from, date_to
+- News Per Search (keyword), date, date_from, date_to
 - List Symbols
 - Add Symbol
+- Update Symbol
 - Remove Symbol*
 - Get Article
 - Remove Article
@@ -59,7 +61,7 @@ Admin page for this app can be visited on:
 
 127.0.0.1:8000/admin/newscraper
 
-Unit tests and model factories for most important code parts are written and can be run by:
+Unit tests and model factories for most important code parts are written and can be run by the following command:
 
 python manage.py newscraper.test
 
