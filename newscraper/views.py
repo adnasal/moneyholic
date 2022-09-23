@@ -1,11 +1,9 @@
 import logging
 from datetime import datetime
-import requests
 
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db.models import Q
-from django.views.decorators.cache import cache_page
 from rest_framework import pagination
 from rest_framework import status, filters, serializers, fields
 from rest_framework.generics import (
@@ -177,36 +175,35 @@ class ArticleView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArticleViewSerializer
 
+   # def recently_viewed(request, post_id):
+    #    session = None
+     #   if not "recently_viewed" in request.session:
+      #      request.session["recently_viewed"] = []
+       #     request.session["recently_viewed"].append(post_id)
+        #else:
+         #   if post_id in request.session["recently_viewed"]:
+          #      request.session["recently_viewed"].remove(post_id)
+           # request.session["recently_viewed"].insert(0, post_id)
+            #if len(request.session["recently_viewed"]) > 5:
+             #   request.session["recently_viewed"].pop()
+        #request.session.modified = True
+
     def get(self, request, pk=None):
         try:
             Article.objects.get(pk=pk)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
         else:
-
+            # self.recently_viewed(pk)
+            # recently_viewed_qs = Article.objects.filter(pk__in=request.session.get("recently_viewed", []))
+            # recently_viewed_qs = sorted(recently_viewed_qs, key=lambda x: request.session[x.id])
             article = Article.objects.get(pk=pk)
             serializer = ArticleViewSerializer(article)
             data = serializer.data
 
-            recently_viewed_products = None
-
-            if 'recently_viewed' in request.session:
-                if article.pk in request.session['recently_viewed']:
-                    request.session['recently_viewed'].remove(article.pk)
-
-                articles = Article.objects.filter(pk__in=request.session['recently_viewed'])
-                recently_viewed_products = sorted(articles,
-                                                  key=lambda x: request.session['recently_viewed'].index(x.pk)
-                                                  )
-                request.session['recently_viewed'].insert(0, article.pk)
-                if len(request.session['recently_viewed']) > 5:
-                    request.session['recently_viewed'].pop()
-            else:
-                request.session['recently_viewed'] = [article.pk]
-
-            request.session.modified = True
-
             return Response(data, content_type="application/json")
+
+
 
 
 class ArticleRemoveView(DestroyAPIView):
