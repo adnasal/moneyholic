@@ -74,6 +74,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '#p7&kxb7y^yq8ahfw5%$xh=f8=&1y*5+a5(
 ALLOWED_HOSTS = ["*"]
 ROOT_URLCONF = 'src.urls'
 WSGI_APPLICATION = 'src.wsgi.application'
+APPEND_SLASH = True
 
 # Email
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
@@ -167,7 +168,7 @@ TEMPLATES = [
 
 # Set DEBUG to False as a default for safety
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = os.getenv('DJANGO_DEBUG', False) == 'True'
+DEBUG = os.getenv('DJANGO_DEBUG', False) == 'False'
 
 # Password Validation
 # https://docs.djangoproject.com/en/2.0/topics/auth/passwords/#module-django.contrib.auth.password_validation
