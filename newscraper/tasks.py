@@ -1,13 +1,15 @@
+from datetime import datetime
+from celery import shared_task
 import requests
 from bs4 import BeautifulSoup
 from celery import task
+from celery.signals import worker_ready
 from django.conf import settings
-from datetime import datetime
 
 from .models import Article, Symbol
 from .serializers import ArticleSerializer
 
-
+@shared_task(bind=True)
 @task(name='CollectArticlesYahoo')
 def collect_articles_yahoo() -> str:
     symbols = Symbol.objects.filter(is_enabled=True)
@@ -52,3 +54,9 @@ def collect_articles_yahoo() -> str:
                     serializer.save()
 
         return "Done"
+
+
+@worker_ready.connect
+def at_start(sender, **k):
+    with sender.app.connection() as conn:
+         sender.app.send_task('newscraper.tasks.task')

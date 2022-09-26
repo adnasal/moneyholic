@@ -11,4 +11,11 @@ app = Celery('src.config')
 
 app.config_from_object('django.conf:settings')
 
+app.conf.beat_schedule = {
+    'collect-articles-startup': {
+        'task': 'newscraper.tasks.CollectArticlesYahoo',
+    }
+}
+
+
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)

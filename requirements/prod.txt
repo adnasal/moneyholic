@@ -16,6 +16,7 @@ django-model-utils==4.1.1
 django_unique_upload==0.2.1
 django-summernote==0.8.11.6
 django-celery-beat==2.0.0
+flower
 django-activity-stream==0.10.0
 django-money==2.0
 

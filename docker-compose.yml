@@ -54,5 +54,18 @@ services:
     ports:
       - "6379:6379"
 
+  flower:
+    build:
+     context: .
+    command: 'sh -c "celery -A newscraper flower && python3 -m celery worker"'
+    volumes:
+      - ./:/app
+    ports:
+      - "5555:5555"
+    env_file: .env
+    depends_on:
+      - queue
+      - redis
+
 volumes:
   db-data:

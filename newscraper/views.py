@@ -12,6 +12,7 @@ from rest_framework.generics import (
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django_celery_beat.models import PeriodicTask
 
 from .models import Symbol, Article
 from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer
