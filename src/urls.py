@@ -24,6 +24,7 @@ router.registry.extend(users_router.registry)
 router.registry.extend(files_router.registry)
 
 urlpatterns = [
+                  path('', RedirectView.as_view(url=r'^admin/newscraper', permanent=True)),
                   # admin panel
                   path('admin/', admin.site.urls),
                   url(r'^jet/', include('jet.urls', 'jet')),  # Django JET URLS
