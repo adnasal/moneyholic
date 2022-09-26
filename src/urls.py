@@ -2,7 +2,7 @@ from django.conf import settings
 from django.conf.urls import url
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, re_path, include, reverse_lazy
+from django.urls import path, re_path, include, reverse_lazy, reverse
 from django.views.generic.base import RedirectView
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
@@ -24,7 +24,7 @@ router.registry.extend(users_router.registry)
 router.registry.extend(files_router.registry)
 
 urlpatterns = [
-                  path('', RedirectView.as_view(url=r'^admin/newscraper', permanent=True)),
+                  path('', RedirectView.as_view(url=reverse_lazy('admin:index'))),
                   # admin panel
                   path('admin/', admin.site.urls),
                   url(r'^jet/', include('jet.urls', 'jet')),  # Django JET URLS
