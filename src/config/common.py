@@ -7,6 +7,7 @@ from datetime import timedelta
 from sentry_sdk.integrations.django import DjangoIntegration
 from os.path import join
 
+
 TESTING = sys.argv[1:2] == ['test']
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

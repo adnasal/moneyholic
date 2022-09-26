@@ -240,10 +240,3 @@ class ArticleRecentNewsView(ListAPIView):
         queryset = Article.objects.filter(published_at__range=[yesterday, today], symbol__is_enabled=True)
 
         return queryset
-
-
-class PeriodicTaskView(GenericAPIView):
-
-    def get(self):
-        last_run = PeriodicTask.objects.only('last_run_at').get(task='CollectArticlesYahoo').last_run_at
-        return Response(last_run, status.HTTP_200_OK)

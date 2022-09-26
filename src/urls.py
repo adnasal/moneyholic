@@ -9,7 +9,7 @@ from drf_yasg.views import get_schema_view
 from rest_framework.routers import DefaultRouter
 
 from newscraper.views import SymbolRemoveView, SymbolAddView, SymbolListView, ArticleListView, ArticleRemoveView, \
-    SymbolUpdateView, ArticleView, ArticleRecentNewsView, PeriodicTaskView
+    SymbolUpdateView, ArticleView, ArticleRecentNewsView
 from src.files.urls import files_router
 from src.users.urls import users_router
 
@@ -39,7 +39,6 @@ urlpatterns = [
                   url('api/v1/remove_symbol/', SymbolRemoveView.as_view(), name='remove_symbol'),
                   url('api/v1/update_symbol/(?P<pk>\d+)/$', SymbolUpdateView.as_view(), name='update_symbol'),
                   url(r'^api/v1/symbols', SymbolListView.as_view(), name='symbols'),
-                  url(r'^api/v1/tasks/last_run', PeriodicTaskView.as_view(), name='periodic_tasks'),
                   # auth
                   path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
                   # swagger docs
