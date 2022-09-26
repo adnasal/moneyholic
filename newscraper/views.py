@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
@@ -175,18 +175,18 @@ class ArticleView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArticleViewSerializer
 
-   # def recently_viewed(request, post_id):
+    # def recently_viewed(request, post_id):
     #    session = None
-     #   if not "recently_viewed" in request.session:
-      #      request.session["recently_viewed"] = []
-       #     request.session["recently_viewed"].append(post_id)
-        #else:
-         #   if post_id in request.session["recently_viewed"]:
-          #      request.session["recently_viewed"].remove(post_id)
-           # request.session["recently_viewed"].insert(0, post_id)
-            #if len(request.session["recently_viewed"]) > 5:
-             #   request.session["recently_viewed"].pop()
-        #request.session.modified = True
+    #   if not "recently_viewed" in request.session:
+    #      request.session["recently_viewed"] = []
+    #     request.session["recently_viewed"].append(post_id)
+    # else:
+    #   if post_id in request.session["recently_viewed"]:
+    #      request.session["recently_viewed"].remove(post_id)
+    # request.session["recently_viewed"].insert(0, post_id)
+    # if len(request.session["recently_viewed"]) > 5:
+    #   request.session["recently_viewed"].pop()
+    # request.session.modified = True
 
     def get(self, request, pk=None):
         try:
@@ -202,8 +202,6 @@ class ArticleView(GenericAPIView):
             data = serializer.data
 
             return Response(data, content_type="application/json")
-
-
 
 
 class ArticleRemoveView(DestroyAPIView):
@@ -234,10 +232,10 @@ class ArticleRecentNewsView(ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
-        today = datetime.date.today()
-        first = today.replace(day=1)
-        last_month = first - datetime.timedelta(days=1)
+        today = datetime.now()
 
-        queryset = Article.objects.filter(date__range=[last_month, datetime.now()], symbol__is_enabled=True)
+        yesterday = today - timedelta(days=1)
+
+        queryset = Article.objects.filter(published_at__range=[yesterday, today], symbol__is_enabled=True)
 
         return queryset
