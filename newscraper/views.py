@@ -12,6 +12,7 @@ from rest_framework.generics import (
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django_celery_beat.models import PeriodicTask
 
 from .models import Symbol, Article
 from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer
@@ -239,3 +240,10 @@ class ArticleRecentNewsView(ListAPIView):
         queryset = Article.objects.filter(published_at__range=[yesterday, today], symbol__is_enabled=True)
 
         return queryset
+
+
+class PeriodicTaskView(GenericAPIView):
+
+    def get(self):
+        last_run = PeriodicTask.objects.only('last_run_at').get(task='CollectArticlesYahoo').last_run_at
+        return Response(last_run, status.HTTP_200_OK)
