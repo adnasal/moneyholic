@@ -31,13 +31,13 @@ class ArticleAdmin(admin.ModelAdmin):
             'fields': ['title', 'text', 'published_at']
         }),
         ('Further information', {
-            'fields': ['symbol', 'article_link', 'external_id']
+            'fields': ['symbol', 'article_link', 'external_id', 'is_archived', 'is_deleted']
         }),
     )
 
-    list_display = ['title', 'published_at', 'symbol']
+    list_display = ['title', 'published_at', 'symbol', 'is_archived', 'is_deleted']
     date_hierarchy = 'published_at'
     empty_value_display = '-empty-'
-    list_filter = ['symbol']
+    list_filter = ['symbol', 'is_archived', 'is_deleted']
 
 # admin.site.register(Article, ArticleAdmin)

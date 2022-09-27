@@ -34,6 +34,8 @@ class ArticleSerializer(serializers.ModelSerializer):
             "published_at",
             "article_link",
             "external_id",
+            "is_archived",
+            "is_deleted",
         ]
 
 
@@ -47,5 +49,7 @@ class ArticleViewSerializer(serializers.ModelSerializer):
             "published_at",
             "article_link",
             "external_id",
+            "is_archived",
+            "is_deleted",
         ]
         depth = 1

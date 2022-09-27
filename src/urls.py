@@ -9,7 +9,7 @@ from drf_yasg.views import get_schema_view
 from rest_framework.routers import DefaultRouter
 
 from newscraper.views import SymbolRemoveView, SymbolAddView, SymbolListView, ArticleListView, ArticleRemoveView, \
-    SymbolUpdateView, ArticleView, ArticleRecentNewsView
+    SymbolUpdateView, ArticleView, ArticleRecentNewsView, DeletedArticlesView, ArchivedArticlesView, ArticleArchiveView, ArticleDeleteView
 from src.files.urls import files_router
 from src.users.urls import users_router
 
@@ -33,6 +33,10 @@ urlpatterns = [
                   # api
                   url(r'^api/v1/news', ArticleListView.as_view(), name='news'),
                   url(r'^api/v1/recent', ArticleRecentNewsView.as_view(), name='recent_news'),
+                  url(r'^api/v1/deleted', DeletedArticlesView.as_view(), name='deleted_news'),
+                  url(r'^api/v1/archived', ArchivedArticlesView.as_view(), name='archived_news'),
+                  url('api/v1/is_archived_article/(?P<pk>\d+)/$', ArticleArchiveView.as_view(), name='archive_article'),
+                  url('api/v1/is_deleted_article/(?P<pk>\d+)/$', ArticleDeleteView.as_view(), name='delete_article'),
                   url('api/v1/remove_article/(?P<pk>\d+)/$', ArticleRemoveView.as_view(), name='remove_article'),
                   url('api/v1/article/(?P<pk>\d+)/$', ArticleView.as_view(), name='get_article'),
                   url(r'^api/v1/add_symbol', SymbolAddView.as_view(), name='add_symbol'),

@@ -133,7 +133,7 @@ class ArticleListView(ListAPIView):
         query_params = ValidateQueryParams(data=param)
         query_params.is_valid(raise_exception=True)
 
-        queryset = Article.objects.filter(symbol__is_enabled=True).order_by('symbol_id')
+        queryset = Article.objects.filter(is_archived=False, is_deleted=False).order_by('symbol_id')
 
         symbol = Symbol.objects.filter(is_enabled=True).values_list('symbol', flat=True)
         symbol_class = Symbol.objects.filter(is_enabled=True).values_list('symbol_class', flat=True)
@@ -142,16 +142,16 @@ class ArticleListView(ListAPIView):
         if param.get('search') is not None:
 
             search = param.get('search')
-            query_set = Article.objects.filter(Q(title__contains=search) | Q(text__contains=search))
+            query_set = queryset.filter(Q(title__contains=search) | Q(text__contains=search))
 
         elif param.get('date_from') is not None and param.get('date_to') is not None:
             date_from = datetime.strptime(param.get('date_from'), '%Y-%m-%d')
             date_to = datetime.strptime(param.get('date_to'), '%Y-%m-%d')
-            query_set = Article.objects.filter(published_at__gte=date_from, published_at__lte=date_to)
+            query_set = queryset.filter(published_at__gte=date_from, published_at__lte=date_to)
 
         elif param.get('date') is not None:
             date = datetime.strptime(param.get('date'), '%Y-%m-%d')
-            query_set = Article.objects.filter(published_at__contains=date)
+            query_set = queryset.filter(published_at__contains=date)
 
         elif param.get('symbol_class') is not None and param.get(
                 'symbol_class') in symbol_class:
@@ -191,14 +191,14 @@ class ArticleView(GenericAPIView):
 
     def get(self, request, pk=None):
         try:
-            Article.objects.get(pk=pk)
+            Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
         else:
             # self.recently_viewed(pk)
             # recently_viewed_qs = Article.objects.filter(pk__in=request.session.get("recently_viewed", []))
             # recently_viewed_qs = sorted(recently_viewed_qs, key=lambda x: request.session[x.id])
-            article = Article.objects.get(pk=pk)
+            article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
             serializer = ArticleViewSerializer(article)
             data = serializer.data
 
@@ -211,12 +211,12 @@ class ArticleRemoveView(DestroyAPIView):
 
     def delete(self, request, pk=None, **kwargs):
         try:
-            Article.objects.get(pk=pk)
+            Article.objects.get(pk=pk, is_deleted=True)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist or has been already removed.'},
                             status.HTTP_404_NOT_FOUND)
         else:
-            response = Article.objects.get_or_none(id=pk)
+            response = Article.objects.get_or_none(id=pk, is_archived=False, is_deleted=False)
             response.delete()
             return Response(
                 data={
@@ -224,6 +224,41 @@ class ArticleRemoveView(DestroyAPIView):
                 },
                 status=status.HTTP_200_OK
             )
+
+
+class ArticleArchiveView(DestroyAPIView):
+    permission_classes = [AllowAny]
+    queryset = Article.objects.all()
+
+    def put(self, request, pk):
+        try:
+            Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'},
+                            status.HTTP_404_NOT_FOUND)
+        else:
+            article = Article.objects.get(pk=pk, is_deleted=False)
+            article.is_archived = True
+            article.save(update_fields=['is_archived'])
+
+        return Response({f'Article archived: {article.is_archived} '}, status.HTTP_202_ACCEPTED)
+
+class ArticleDeleteView(DestroyAPIView):
+    permission_classes = [AllowAny]
+    queryset = Article.objects.all()
+
+    def put(self, request, pk):
+        try:
+            Article.objects.get(pk=pk, is_deleted=False)
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'},
+                            status.HTTP_404_NOT_FOUND)
+        else:
+            article = Article.objects.get(pk=pk, is_deleted=False)
+            article.is_deleted = True
+            article.save(update_fields=['is_deleted'])
+
+        return Response({f'Article deleted: {article.is_deleted} '}, status.HTTP_202_ACCEPTED)
 
 
 class ArticleRecentNewsView(ListAPIView):
@@ -236,10 +271,10 @@ class ArticleRecentNewsView(ListAPIView):
     yesterday = today - timedelta(days=1)
 
     def initial_scrape(self):
-        data = Article.objects.filter(published_at__range=[self.yesterday, self.today], symbol__is_enabled=True)
+        data = Article.objects.filter(published_at__range=[self.yesterday, self.today])
         while not data:
             collect_articles_yahoo()
-            data = Article.objects.filter(published_at__range=[self.yesterday, self.today], symbol__is_enabled=True)
+            data = Article.objects.filter(published_at__range=[self.yesterday, self.today])
             if data:
                 break
 
@@ -251,4 +286,26 @@ class ArticleRecentNewsView(ListAPIView):
 
         queryset = data
 
+        return queryset
+
+
+class DeletedArticlesView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleViewSerializer
+    ordering = ['-id']
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        queryset = Article.objects.filter(is_deleted=True)
+        return queryset
+
+
+class ArchivedArticlesView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleViewSerializer
+    ordering = ['-id']
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        queryset = Article.objects.filter(is_archived=True)
         return queryset

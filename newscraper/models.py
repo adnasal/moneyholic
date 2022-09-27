@@ -92,4 +92,5 @@ class Article(models.Model):
     published_at = models.DateTimeField(max_length=250)
     article_link = models.URLField(blank=False)
     external_id = models.CharField(max_length=50, null=True)
-
+    is_archived = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
