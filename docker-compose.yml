@@ -56,8 +56,8 @@ services:
 
   flower:
     build:
-     context: .
-    command: 'sh -c "celery -A newscraper flower && python3 -m celery worker"'
+      context: .
+    command: 'sh -c "celery -A newscraper flower --basic_auth=test:password && python3 -m celery worker"'
     volumes:
       - ./:/app
     ports:

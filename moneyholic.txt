@@ -61,6 +61,10 @@ Admin page for this app can be visited on:
 
 127.0.0.1:8000/admin/newscraper
 
+Flower page for this app with all the tasks can be visited on:
+
+127.0.0.1:5555/tasks
+
 Unit tests and model factories for most important code parts are written and can be run by the following command:
 
 python manage.py newscraper.test

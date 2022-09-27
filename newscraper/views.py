@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
@@ -12,8 +12,8 @@ from rest_framework.generics import (
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django_celery_beat.models import PeriodicTask
 
+from newscraper.tasks import collect_articles_yahoo
 from .models import Symbol, Article
 from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer
 
@@ -232,11 +232,23 @@ class ArticleRecentNewsView(ListAPIView):
     ordering = ['-id']
     pagination_class = CustomPagination
 
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+
+    def initial_scrape(self):
+        data = Article.objects.filter(published_at__range=[self.yesterday, self.today], symbol__is_enabled=True)
+        while not data:
+            collect_articles_yahoo()
+            data = Article.objects.filter(published_at__range=[self.yesterday, self.today], symbol__is_enabled=True)
+            if data:
+                break
+
+        return data
+
     def get_queryset(self, *args, **kwargs):
-        today = datetime.now()
 
-        yesterday = today - timedelta(days=1)
+        data = self.initial_scrape()
 
-        queryset = Article.objects.filter(published_at__range=[yesterday, today], symbol__is_enabled=True)
+        queryset = data
 
         return queryset
