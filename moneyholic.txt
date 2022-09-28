@@ -9,6 +9,7 @@ Moneyholic works with help of five different services, which can be seen in dock
 - worker (Celery)
 - scheduler (celery.beat)
 - message broker (Redis)
+- flower (Flower as Celery dashboard with authentication)
 
 
 All needed environment variables can be found in .env file.
@@ -21,18 +22,23 @@ distincted upon: AATL, TWTR, GC=F and INTC.
 This api consists of next endpoints (url.py), Postman collection tested:
 
 - News
-- Recent News
+- Recent News (News from previous day)
 - News Per Symbol
 - News Per Symbol Class
 - News Per Search (keyword), date, date_from, date_to
+- Archived News
+- Deleted News
 - List Symbols
 - Add Symbol
 - Update Symbol
 - Remove Symbol*
 - Get Article
-- Remove Article
+- Remove Article**
+- Delete Article
+- Archive Article
 
-* Symbol can be removed only if all of its connected articles are removed.
+* Symbol can be removed only if all of its connected articles are removed. Only for admin purposes.
+** Only for admin purposes and special cases.
 
 Symbol can be enabled or disabled. Only enabled symbols' articles will be shown on news feed.
 
@@ -42,6 +48,7 @@ Validations were done on views, such as:
 
 - Already existing symbol cannot be added
 - Article/symbol that does not exist cannot be removed
+- Already archived/deleted articles cannot be archived/deleted again
 - Appropriate messages when errors happen
 - Cannot delete default symbols (AATL,TWTR, GC=F and INTC)
 
@@ -51,7 +58,10 @@ http://127.0.0.1:8000/api/v1/news/?symbol=TWTR&&page=2
 
 This would return all the news with symbol TWTR positioned on page 2.
 
-Celery is used for asynchronous tasks and periodic scraping every 15 minutes. Library used for scraping is BeautifulSoup4.
+Celery is used for asynchronous tasks and periodic scraping every 15 minutes, with initial scrape starting when the app starts. Library used for scraping is BeautifulSoup4.
+
+News are per default archived when 30 days old, and deleted when 90 days old. These values can be changed in Django Admin.
+Queue is per default purged every day to keep the working flow clean.
 
 Swagger, as html documentation page, is also implemented within the project, and can be visited on:
 

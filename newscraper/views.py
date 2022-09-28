@@ -9,7 +9,7 @@ from rest_framework import status, filters, serializers, fields
 from rest_framework.generics import (
     CreateAPIView, GenericAPIView, DestroyAPIView, ListAPIView, get_object_or_404
 )
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -52,7 +52,7 @@ class SymbolListView(ListAPIView):
 
 
 class SymbolRemoveView(GenericAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     queryset = Symbol.objects.all()
 
     def post(self):
@@ -134,9 +134,9 @@ class ArticleListView(ListAPIView):
         query_params.is_valid(raise_exception=True)
 
         queryset = Article.objects.filter(is_archived=False, is_deleted=False).order_by('symbol_id')
-
-        symbol = Symbol.objects.filter(is_enabled=True).values_list('symbol', flat=True)
-        symbol_class = Symbol.objects.filter(is_enabled=True).values_list('symbol_class', flat=True)
+        symbols = Symbol.objects.filter(is_enabled=True)
+        symbol = symbols.values_list('symbol', flat=True)
+        symbol_class = symbols.values_list('symbol_class', flat=True)
         query_set = None
 
         if param.get('search') is not None:
@@ -206,7 +206,7 @@ class ArticleView(GenericAPIView):
 
 
 class ArticleRemoveView(DestroyAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     queryset = Article.objects.all()
 
     def delete(self, request, pk=None, **kwargs):
@@ -214,7 +214,7 @@ class ArticleRemoveView(DestroyAPIView):
             Article.objects.get(pk=pk, is_deleted=True)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist or has been already removed.'},
-                            status.HTTP_404_NOT_FOUND)
+                            status=status.HTTP_404_NOT_FOUND)
         else:
             response = Article.objects.get_or_none(id=pk, is_archived=False, is_deleted=False)
             response.delete()
@@ -235,13 +235,13 @@ class ArticleArchiveView(DestroyAPIView):
             Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'},
-                            status.HTTP_404_NOT_FOUND)
+                            status=status.HTTP_404_NOT_FOUND)
         else:
             article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
             article.is_archived = True
             article.save(update_fields=['is_archived'])
 
-        return Response({f'Article archived: {article.is_archived} '}, status.HTTP_202_ACCEPTED)
+        return Response({f'Article archived: {article.is_archived} '}, status=status.HTTP_202_ACCEPTED)
 
 
 class ArticleDeleteView(DestroyAPIView):
@@ -259,7 +259,7 @@ class ArticleDeleteView(DestroyAPIView):
             article.is_deleted = True
             article.save(update_fields=['is_deleted'])
 
-        return Response({f'Article deleted: {article.is_deleted} '}, status.HTTP_202_ACCEPTED)
+        return Response({f'Article deleted: {article.is_deleted} '}, status=status.HTTP_202_ACCEPTED)
 
 
 class ArticleRecentNewsView(ListAPIView):
@@ -283,9 +283,7 @@ class ArticleRecentNewsView(ListAPIView):
 
     def get_queryset(self, *args, **kwargs):
 
-        data = self.initial_scrape()
-
-        queryset = data
+        queryset = self.initial_scrape()
 
         return queryset
 
