@@ -20,5 +20,5 @@ class ArticleFactory(factory.django.DjangoModelFactory):
     symbol = SymbolFactory()
     title = factory.Sequence(lambda n: f'Title{n}')
     text = factory.Sequence(lambda n: f'Hello. Nice to meet you{n}')
-    published_at = timezone.now()
+    published_at = factory.Faker("date_time", tzinfo=timezone.utc)
     article_link = 'http://articlelink.com'

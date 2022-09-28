@@ -50,7 +50,8 @@ class ModelAdminArticleTests(TestCase):
             ma.get_fieldsets(request),
             [
                 (None, {
-                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived', 'is_deleted']
+                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived',
+                               'is_deleted']
                 }),
             ]
         ),
@@ -58,7 +59,8 @@ class ModelAdminArticleTests(TestCase):
             ma.get_fieldsets(request, self.article),
             [
                 (None, {
-                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived', 'is_deleted']
+                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived',
+                               'is_deleted']
                 }),
             ]
 

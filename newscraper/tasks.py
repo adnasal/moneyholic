@@ -1,5 +1,5 @@
 import datetime
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 import requests
 from bs4 import BeautifulSoup
