@@ -68,3 +68,23 @@ class TestArticle(TestCase):
         article = self.article
         max_length = article._meta.get_field('text').max_length
         self.assertEqual(max_length, 10000)
+
+    def test_is_archived_label(self):
+        article = self.article
+        field_label = article._meta.get_field('is_archived').verbose_name
+        self.assertEqual(field_label, 'is archived')
+
+    def test_default_is_archived_false(self):
+        article = self.article
+        is_archived = article._meta.get_field('is_archived')
+        self.assertTrue(is_archived)
+
+    def test_is_deleted_label(self):
+        article = self.article
+        field_label = article._meta.get_field('is_deleted').verbose_name
+        self.assertEqual(field_label, 'is deleted')
+
+    def test_default_is_deleted_false(self):
+        article = self.article
+        is_deleted = article._meta.get_field('is_deleted')
+        self.assertTrue(is_deleted)

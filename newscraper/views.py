@@ -237,11 +237,12 @@ class ArticleArchiveView(DestroyAPIView):
             return Response({'Failure': 'Article does not exist.'},
                             status.HTTP_404_NOT_FOUND)
         else:
-            article = Article.objects.get(pk=pk, is_deleted=False)
+            article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
             article.is_archived = True
             article.save(update_fields=['is_archived'])
 
         return Response({f'Article archived: {article.is_archived} '}, status.HTTP_202_ACCEPTED)
+
 
 class ArticleDeleteView(DestroyAPIView):
     permission_classes = [AllowAny]

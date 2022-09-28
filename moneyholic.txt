@@ -67,6 +67,6 @@ Flower page for this app with all the tasks can be visited on:
 
 Unit tests and model factories for most important code parts are written and can be run by the following command:
 
-python manage.py newscraper.test
+python manage.py test
 
 

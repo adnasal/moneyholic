@@ -1,14 +1,16 @@
-from datetime import datetime
+import datetime
+from datetime import date, timedelta
 
-from newscraper.celery import app
 import requests
 from bs4 import BeautifulSoup
 from celery import task
-from dateutil.relativedelta import relativedelta
 from django.conf import settings
 
+from newscraper.celery import app
 from .models import Article, Symbol
 from .serializers import ArticleSerializer
+
+today = date.today()
 
 
 @task(name='CollectArticlesYahoo')
@@ -42,7 +44,8 @@ def collect_articles_yahoo() -> str:
 
             for article in articles_list:
 
-                existing_article = Article.objects.filter(external_id=article.get('external_id'), symbol__is_enabled=True)
+                existing_article = Article.objects.filter(external_id=article.get('external_id'),
+                                                          symbol__is_enabled=True)
 
                 if not existing_article:
                     serializer = ArticleSerializer(data=article)
@@ -59,36 +62,23 @@ def collect_articles_yahoo() -> str:
 
 
 @task(name='ArchiveArticles')
-def archive_articles() -> str:
-
-    today = datetime.date.today()
-    last_month = today.replace(day=1) - datetime.timedelta(days=1)
-
-    articles = Article.objects.filter(published_at__lte=last_month)
-
-    for article in articles:
-
-        article.is_archived = True
+def archive_articles(days=30) -> str:
+    last_month = today - timedelta(days=days)
+    Article.objects.filter(published_at__lte=last_month).update(is_archived=True)
 
     return "Done"
 
 
 @task(name='DeleteArticles')
-def delete_articles() -> str:
-    today = datetime.date.today()
-
-    last_three_months = today - relativedelta(months=3)
-
-    articles = Article.objects.filter(published_at__lte=last_three_months)
-
-    for article in articles:
-        article.is_deleted = True
+def delete_articles(days=90) -> str:
+    last_three_months = today - timedelta(days=days)
+    Article.objects.filter(published_at__lte=last_three_months).update(is_deleted=True)
 
     return "Done"
 
+
 @task(name='PurgeCeleryQueue')
 def purge_celery_queue() -> str:
-
     app.control.purge()
 
     return "Done"

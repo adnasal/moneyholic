@@ -49,6 +49,15 @@ class TestViews(TestCase):
 
         self.assertEquals(response.status_code, 404)
 
+    def test_update_symbol(self):
+        response = self.client.put(reverse('update_symbol', args=['1']), {
+            'symbol': 'INTC',
+            "symbol_class": "1",
+            "is_enabled": "True"
+        })
+
+        self.assertEquals(response.status_code, 202)
+
     def test_update_symbol_does_not_exist(self):
         response = self.client.put(reverse('update_symbol', args=['0']), {
             'symbol': 'TWTR',
@@ -132,3 +141,21 @@ class TestViews(TestCase):
         enabled_symbol = Symbol.objects.values_list('id').filter(is_enabled__in=result)
 
         self.assertEqual(len(enabled_symbol), 0)
+
+    def test_deleted_articles(self):
+        response = self.client.get(reverse('deleted_news'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_archived_articles(self):
+        response = self.client.get(reverse('archived_news'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_archive_article_does_not_exist(self):
+        response = self.client.put(reverse('archive_article', args=['4282']))
+
+        self.assertEquals(response.status_code, 404)
+
+    def test_delete_article_does_not_exist(self):
+        response = self.client.put(reverse('delete_article', args=['4283']))
+
+        self.assertEquals(response.status_code, 404)
