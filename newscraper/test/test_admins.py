@@ -41,7 +41,7 @@ class ModelAdminArticleTests(TestCase):
 
         self.assertEqual(
             list(ma.get_fields(request, self.article)),
-            ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id']
+            ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived', 'is_deleted']
         )
 
     def test_default_fieldsets(self):
@@ -50,7 +50,7 @@ class ModelAdminArticleTests(TestCase):
             ma.get_fieldsets(request),
             [
                 (None, {
-                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id']
+                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived', 'is_deleted']
                 }),
             ]
         ),
@@ -58,7 +58,7 @@ class ModelAdminArticleTests(TestCase):
             ma.get_fieldsets(request, self.article),
             [
                 (None, {
-                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id']
+                    'fields': ['symbol', 'title', 'text', 'published_at', 'article_link', 'external_id', 'is_archived', 'is_deleted']
                 }),
             ]
 

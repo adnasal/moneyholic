@@ -89,7 +89,7 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379')
 # Scraper
 SCRAPING_URL = 'https://feeds.finance.yahoo.com/rss/2.0/headline?s='
 US = '&region=US&lang=en-US'
-USE_TZ = True
+USE_TZ = False
 ADMINS = ()
 
 # Sentry
@@ -97,6 +97,7 @@ sentry_sdk.init(dsn=os.getenv('SENTRY_DSN', ''), integrations=[DjangoIntegration
 
 # CORS
 CORS_ORIGIN_ALLOW_ALL = True
+
 
 # CELERY
 CELERY_ACCEPT_CONTENT = ['application/json']
