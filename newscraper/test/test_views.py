@@ -45,12 +45,12 @@ class TestViews(TestCase):
         self.assertEquals(response.status_code, 400)
 
     def test_get_article_does_not_exist(self):
-        response = self.client.get(reverse('get_article', args=['5455777']))
+        response = self.client.get(reverse('get_article', args=['0']))
 
         self.assertEquals(response.status_code, 404)
 
     def test_update_symbol(self):
-        response = self.client.put(reverse('update_symbol', args=['1']), {
+        response = self.client.put(reverse('update_symbol', args=[self.symbol.pk]), {
             'symbol': 'INTC',
             "symbol_class": "1",
             "is_enabled": "True"
@@ -68,9 +68,9 @@ class TestViews(TestCase):
         self.assertEquals(response.status_code, 404)
 
     def test_remove_article(self):
-        self.client.delete(reverse('remove_article', args=['545']))
+        self.client.delete(reverse('remove_article', args=[self.article.pk]))
 
-        article_deleted = Article.objects.get_or_none(id=545)
+        article_deleted = Article.objects.get_or_none(id=self.article.pk)
 
         self.assertEquals(article_deleted, None)
 
@@ -99,11 +99,11 @@ class TestViews(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_news_per_symbol(self):
-        response = self.client.get(reverse('news') + '?symbol=TWTR')
+        response = self.client.get(reverse('news') + f'?symbol={self.symbol.symbol}')
         self.assertEqual(response.status_code, 200)
 
     def test_news_per_symbol_class(self):
-        response = self.client.get(reverse('news') + '?symbol_class=1')
+        response = self.client.get(reverse('news') + f'?symbol_class={self.symbol.symbol_class}')
         self.assertEqual(response.status_code, 200)
 
     def test_recent_news(self):
@@ -115,7 +115,7 @@ class TestViews(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_news_per_date(self):
-        response = self.client.get(reverse('news') + '?date=2022-09-10')
+        response = self.client.get(reverse('news') + f'?date=2022-09-10')
         self.assertEqual(response.status_code, 200)
 
     def test_news_per_date_wrong_format(self):
@@ -150,20 +150,6 @@ class TestViews(TestCase):
         response = self.client.get(reverse('archived_news'))
         self.assertEqual(response.status_code, 200)
 
-    def test_deleted_article(self):
-        self.client.post(reverse('delete_article', args=['4430']))
-
-        article_deleted = Article.objects.get_or_none(id=4430)
-
-        self.assertEquals(article_deleted, None)
-
-    def test_archived_article(self):
-        self.client.post(reverse('archive_article', args=['4429']))
-
-        article_archived = Article.objects.get_or_none(id=4429)
-
-        self.assertEquals(article_archived, None)
-
     def test_archive_article_does_not_exist(self):
         response = self.client.put(reverse('archive_article', args=['0']))
 
@@ -175,11 +161,25 @@ class TestViews(TestCase):
         self.assertEquals(response.status_code, 404)
 
     def test_remove_article_no_auth(self):
-        response = self.client.put(reverse('remove_article', args=['4282']))
+        response = self.client.put(reverse('remove_article', args=[self.article.pk]))
 
         self.assertEquals(response.status_code, 403)
 
+    def test_archived_article(self):
+        self.client.post(reverse('archive_article', args=[self.article.pk]))
+
+        article_archived = Article.objects.get_or_none(id=self.article.pk)
+
+        self.assertEquals(article_archived, None)
+
+    def test_deleted_article(self):
+        self.client.post(reverse('delete_article', args=[self.article.pk]))
+
+        article_deleted = Article.objects.get_or_none(id=self.article.pk)
+
+        self.assertEquals(article_deleted, None)
+
     def test_remove_symbol_no_auth(self):
-        response = self.client.put(reverse('remove_symbol', args=['1']))
+        response = self.client.put(reverse('remove_symbol', args=[self.symbol.pk]))
 
         self.assertEquals(response.status_code, 403)
