@@ -3,7 +3,7 @@ from datetime import date, timedelta, datetime
 
 import requests
 from bs4 import BeautifulSoup
-from celery import task
+from celery import shared_task
 from django.conf import settings
 
 from newscraper.celery import app
@@ -13,7 +13,7 @@ from .serializers import ArticleSerializer
 today = date.today()
 
 
-@task(name='CollectArticlesYahoo')
+@shared_task(name='CollectArticlesYahoo')
 def collect_articles_yahoo() -> str:
     symbols = Symbol.objects.filter(is_enabled=True)
     url: str = settings.SCRAPING_URL
@@ -61,7 +61,7 @@ def collect_articles_yahoo() -> str:
         return "Done"
 
 
-@task(name='ArchiveArticles')
+@shared_task(name='ArchiveArticles')
 def archive_articles(days=30) -> str:
     last_month = today - timedelta(days=days)
     Article.objects.filter(published_at__lte=last_month).update(is_archived=True)
@@ -69,7 +69,7 @@ def archive_articles(days=30) -> str:
     return "Done"
 
 
-@task(name='DeleteArticles')
+@shared_task(name='DeleteArticles')
 def delete_articles(days=90) -> str:
     last_three_months = today - timedelta(days=days)
     Article.objects.filter(published_at__lte=last_three_months).update(is_deleted=True)
@@ -77,7 +77,7 @@ def delete_articles(days=90) -> str:
     return "Done"
 
 
-@task(name='PurgeCeleryQueue')
+@shared_task(name='PurgeCeleryQueue')
 def purge_celery_queue() -> str:
     app.control.purge()
 

@@ -2,6 +2,9 @@ import factory
 from django.utils import timezone
 
 from newscraper.models import Symbol, Article
+from faker import Faker
+
+fake = Faker()
 
 
 class SymbolFactory(factory.django.DjangoModelFactory):
@@ -18,7 +21,10 @@ class ArticleFactory(factory.django.DjangoModelFactory):
         model = Article
 
     symbol = SymbolFactory()
-    title = factory.Sequence(lambda n: f'Title{n}')
-    text = factory.Sequence(lambda n: f'Hello. Nice to meet you{n}')
+    title = fake.name()
+    text = fake.text()
     published_at = factory.Faker("date_time", tzinfo=timezone.utc)
     article_link = 'http://articlelink.com'
+    external_id = '20103104adad9##'
+    is_archived = False
+    is_deleted = False
