@@ -6,6 +6,7 @@ WORKDIR /app
 EXPOSE 80
 ENV PYTHONUNBUFFERED 1
 
+
 RUN set -x && \
 	apt-get update && \
 	apt -f install	&& \
@@ -18,6 +19,11 @@ CMD ["sh", "/entrypoint-web.sh"]
 COPY ./docker/ /
 
 COPY ./requirements/ ./requirements
-RUN pip install -r ./requirements/dev.txt
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="/root/.local/bin:$PATH"
+COPY poetry.lock pyproject.toml ./
+RUN poetry config virtualenvs.create false
+RUN poetry config experimental.new-installer false
+RUN poetry install --no-interaction -v
 
 COPY . ./

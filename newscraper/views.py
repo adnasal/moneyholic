@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timedelta
-
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db.models import Q
@@ -45,6 +44,7 @@ class SymbolListView(ListAPIView):
     ordering = ['-id']
     pagination_class = CustomPagination
 
+
     def get_queryset(self, *args, **kwargs):
         queryset = Symbol.objects.filter(is_enabled=True)
 
@@ -54,6 +54,7 @@ class SymbolListView(ListAPIView):
 class SymbolRemoveView(GenericAPIView):
     permission_classes = [IsAdminUser]
     queryset = Symbol.objects.all()
+
 
     def post(self):
 
@@ -84,6 +85,7 @@ class SymbolRemoveView(GenericAPIView):
 class SymbolAddView(CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = SymbolSerializer
+
 
     def create(self, request, **kwargs):
 

@@ -1,0 +1,25 @@
+Hardware Requirements
+
+RAM
+Minimum: 4GB
+Recommended: 8GB
+
+Memory / with 100 visitors on the application simultaneously
+Minimum: 3GB
+Recommended: 3GB
+
+CPU
+Minimum: Intel Core i3
+Recommended: Intel Core i5
+
+Wired Internet Connection
+Yes
+
+Screen Resolution
+1280x1024
+
+Application Window Size
+1024x680
+
+Load Time
+After the deployment is finished, with number of users and spawn rate, these metrics will be calculated on localhost:8089 and afterwards documented.

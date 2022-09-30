@@ -27,10 +27,7 @@ services:
       - db
 
   queue:
-    build:
-      context: .
-      args:
-        REQUIREMENTS_FILE: dev.txt
+    image: moneyholic_web:latest
     restart: unless-stopped
     env_file: .env
     command: sh /entrypoint-queue.sh
@@ -38,10 +35,7 @@ services:
       - ./:/app
 
   beat:
-    build:
-      context: .
-      args:
-        REQUIREMENTS_FILE: dev.txt
+    image: moneyholic_web:latest
     restart: unless-stopped
     env_file: .env
     command: sh /entrypoint-beat.sh
@@ -55,8 +49,7 @@ services:
       - "6379:6379"
 
   flower:
-    build:
-      context: .
+    image: moneyholic_web:latest
     command: 'sh -c "celery -A newscraper flower --basic_auth=test:password && python3 -m celery worker"'
     volumes:
       - ./:/app
