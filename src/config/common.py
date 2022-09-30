@@ -7,6 +7,7 @@ import dotenv
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
+
 TESTING = sys.argv[1:2] == ['test']
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -130,6 +131,7 @@ USE_I18N = False
 USE_L10N = True
 USE_TZ = True
 LOGIN_REDIRECT_URL = '/'
+PYTHONPATH = '/home/adnasal/moneyholic'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
