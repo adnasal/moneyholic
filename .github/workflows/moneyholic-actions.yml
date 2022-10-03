@@ -39,7 +39,7 @@ jobs:
       - name: Check Python version
         run: python --version
       - name: Install requirements
-        run: pip install -r requirements/dev.txt
+        run: poetry install
       - name: Check Syntax
         run: pycodestyle --statistics .
       - name: Run Migrations
