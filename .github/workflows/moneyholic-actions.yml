@@ -52,9 +52,11 @@ jobs:
             path: .venv
             key: pydeps-${{ hashFiles('**/poetry.lock') }}
       - name: Install requirements
-      - run: poetry config virtualenvs.create false
-      - run: poetry config experimental.new-installer false
-      - run: poetry install --no-interaction -v
+        run: poetry config virtualenvs.create false
+      - name: Install requirements2
+        run: poetry config experimental.new-installer false
+      - name: Install requirements3
+        run: poetry install --no-interaction -v
       - name: Run Migrations
         run: python manage.py migrate
       - name: Run Test
