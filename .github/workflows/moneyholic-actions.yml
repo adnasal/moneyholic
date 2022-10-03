@@ -38,16 +38,23 @@ jobs:
           python-version: '3.8'
       - name: Check Python version
         run: python --version
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: cache poetry install
+        uses: actions/cache@v2
         with:
-            virtualenvs-create: true
-            virtualenvs-in-project: true
-            installer-parallel: true
+            path: ~/.local
+            key: poetry-1.1.12-0
+      - name : install poetryba
+        run: curl -sSL https://install.python-poetry.org | python3 -
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+            path: .venv
+            key: pydeps-${{ hashFiles('**/poetry.lock') }}
       - name: Install requirements
-        run: poetry install --no-interaction --no-root
-      - name: Add Django
-        run: poetry add django
+      - run: poetry config virtualenvs.create false
+      - run: poetry config experimental.new-installer false
+      - run: poetry install --no-interaction -v
       - name: Run Migrations
         run: python manage.py migrate
       - name: Run Test
