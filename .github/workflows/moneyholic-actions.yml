@@ -14,15 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres
+        image: postgres:14.2
         env:
-          POSTGRES_USER: ${DB_USER}
-          POSTGRES_PASSWORD: ${DB_PASSWORD}
-          POSTGRES_DB: ${DB_NAME}
-          POSTGRES_HOST: ${DB_HOST}
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: github_actions
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -59,16 +60,8 @@ jobs:
       - name: Install requirements
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction -v
-      - name: Start PostgreSQL
-        run: |
-            sudo systemctl start postgresql.service
-            sudo -u postgres createuser -s runner
       - name: Run Migrations
         run: python3 manage.py migrate
       - name: Run Test
-        env:
-            DB: postgres
-            DB_USER: runner
-            DB_PASSWORD: ''
         run: python3 manage.py test
 
