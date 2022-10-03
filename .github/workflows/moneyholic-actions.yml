@@ -59,13 +59,16 @@ jobs:
       - name: Install requirements
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction -v
+      - name: Start PostgreSQL
+        run: |
+            sudo systemctl start postgresql.service
+            sudo -u postgres createuser -s runner
       - name: Run Migrations
         run: python3 manage.py migrate
       - name: Run Test
         env:
-          DB: ${DB_NAME}
-          DB_HOST: 127.0.0.1
-          DB_PORT: ${DB_PORT}
-          DB_PASSWORD: ${DB_PASSWORD}
+            DB: postgres
+            DB_USER: runner
+            DB_PASSWORD: ''
         run: python3 manage.py test
 
