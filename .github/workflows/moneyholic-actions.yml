@@ -46,8 +46,6 @@ jobs:
             installer-parallel: true
       - name: Install requirements
         run: poetry install --no-interaction --no-root
-      - name: Check Syntax
-        run: pycodestyle --statistics .
       - name: Run Migrations
         run: python manage.py migrate
       - name: Run Test
