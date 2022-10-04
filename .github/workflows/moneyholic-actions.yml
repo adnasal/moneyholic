@@ -10,7 +10,9 @@ on:
 
 
 jobs:
+
   health-check-job:
+    name: Test and Check Code
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -43,16 +45,16 @@ jobs:
       - name: cache poetry install
         uses: actions/cache@v2
         with:
-            path: ~/.local
-            key: poetry-1.1.12-0
-      - name : Install Poetry
+          path: ~/.local
+          key: poetry-1.1.12-0
+      - name: Install Poetry
         run: curl -sSL https://install.python-poetry.org | python3 -
       - name: cache deps
         id: cache-deps
         uses: actions/cache@v2
         with:
-            path: .venv
-            key: pydeps-${{ hashFiles('**/poetry.lock') }}
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
       - name: Poetry config venvs
         run: poetry config virtualenvs.create false
       - name: Poetry config installer
@@ -60,8 +62,82 @@ jobs:
       - name: Install requirements
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction -v
-      - name: Run Migrations
+      - name: Run migrations
         run: python3 manage.py migrate
       - name: Run Test
         run: python3 manage.py test
 
+  build-and-push-job:
+
+    name: Build and Push Image
+    runs-on: ubuntu-latest
+    needs: health-check-job
+
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+"""
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          IMAGE_TAG: moneyholic_web:latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+       
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition service \
+          --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: application
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE }}
+          cluster: ${{ secrets.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition service \
+          --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: application
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.ECS_SERVICE }}
+          cluster: ${{ secrets.ECS_CLUSTER }}
+          wait-for-service-stability: true
+    """
