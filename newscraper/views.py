@@ -13,8 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from newscraper.tasks import collect_articles_yahoo
-from .models import Symbol, Article
-from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer
+from .models import Symbol, Article, ArticleComment
+from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer, ArticleCommentSerializer, ArticleCommentViewSerializer
 
 CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
@@ -310,3 +310,48 @@ class ArchivedArticlesView(ListAPIView):
     def get_queryset(self, *args, **kwargs):
         queryset = Article.objects.filter(is_archived=True)
         return queryset
+
+
+class CommentAddView(CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleCommentSerializer
+
+    def create(self, request, **kwargs):
+        try:
+            param = self.request.query_params
+            if param.get('pk') is not None:
+                Article.objects.get(pk=param.get('pk'))
+            else:
+                return Response({'Failure': 'Please choose which article you want to comment.'},
+                                status.HTTP_404_NOT_FOUND)
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'},
+                            status.HTTP_404_NOT_FOUND)
+        else:
+            serializer = ArticleCommentSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            data = serializer.data
+
+            return Response(data, content_type="application/json")
+
+
+class ArticleViewComments(GenericAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleViewSerializer
+
+    def get(self, request, pk=None):
+        try:
+            Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
+        else:
+            comment_array = []
+            article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
+            comments = ArticleComment.objects.filter(article_commented=article)
+            for comment in comments:
+                serializer = ArticleCommentViewSerializer(comment)
+                data = serializer.data
+                comment_array.append(data)
+
+            return Response(comment_array, content_type="application/json")

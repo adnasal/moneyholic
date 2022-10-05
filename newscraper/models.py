@@ -94,3 +94,11 @@ class Article(models.Model):
     external_id = models.CharField(max_length=50, null=True)
     is_archived = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
+
+
+class ArticleComment(models.Model):
+    comment_writer = models.TextField(max_length=250, blank=False)
+    article_commented = models.ForeignKey(Article, related_name='article_comment', on_delete=models.DO_NOTHING)
+    text = models.CharField(max_length=10000, blank=False, default="What a lame article!")
+    commented_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)

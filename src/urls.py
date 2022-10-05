@@ -10,7 +10,7 @@ from rest_framework.routers import DefaultRouter
 
 from newscraper.views import SymbolRemoveView, SymbolAddView, SymbolListView, ArticleListView, ArticleRemoveView, \
     SymbolUpdateView, ArticleView, ArticleRecentNewsView, DeletedArticlesView, ArchivedArticlesView, ArticleArchiveView, \
-    ArticleDeleteView
+    ArticleDeleteView, CommentAddView, ArticleViewComments
 from src.files.urls import files_router
 from src.users.urls import users_router
 
@@ -40,10 +40,12 @@ urlpatterns = [
                   url('api/v1/is_deleted_article/(?P<pk>\d+)/$', ArticleDeleteView.as_view(), name='delete_article'),
                   url('api/v1/remove_article/(?P<pk>\d+)/$', ArticleRemoveView.as_view(), name='remove_article'),
                   url('api/v1/article/(?P<pk>\d+)/$', ArticleView.as_view(), name='get_article'),
+                  url('api/v1/article_comments/(?P<pk>\d+)/$', ArticleViewComments.as_view(), name='get_article_comments'),
                   url(r'^api/v1/add_symbol', SymbolAddView.as_view(), name='add_symbol'),
                   url('api/v1/remove_symbol/(?P<pk>\d+)/$', SymbolRemoveView.as_view(), name='remove_symbol'),
                   url('api/v1/update_symbol/(?P<pk>\d+)/$', SymbolUpdateView.as_view(), name='update_symbol'),
                   url(r'^api/v1/symbols', SymbolListView.as_view(), name='symbols'),
+                  url(r'^api/v1/add_comment', CommentAddView.as_view(), name='add_comment'),
                   # auth
                   path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
                   # swagger docs

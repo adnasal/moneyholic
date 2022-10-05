@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from newscraper.models import Article, Symbol
+from newscraper.models import Article, Symbol, ArticleComment
 
 
 @admin.register(Symbol)
@@ -41,3 +41,23 @@ class ArticleAdmin(admin.ModelAdmin):
     list_filter = ['symbol', 'is_archived', 'is_deleted']
 
 # admin.site.register(Article, ArticleAdmin)
+
+
+@admin.register(ArticleComment)
+class ArticleCommentAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {
+            'fields': ['comment_writer', 'text', 'commented_at']
+        }),
+        ('Further information', {
+            'fields': ['article_commented', 'updated_at']
+        }),
+    )
+
+    list_display = ['comment_writer', 'commented_at', 'article_commented']
+    date_hierarchy = 'commented_at'
+    empty_value_display = '-empty-'
+    list_filter = ['article_commented', 'comment_writer']
+
+
+# admin.site.register(ArticleComment, ArticleCommentAdmin)

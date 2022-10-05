@@ -1,7 +1,7 @@
 import factory
 from django.utils import timezone
 
-from newscraper.models import Symbol, Article
+from newscraper.models import Symbol, Article, ArticleComment
 from faker import Faker
 
 fake = Faker()
@@ -28,3 +28,14 @@ class ArticleFactory(factory.django.DjangoModelFactory):
     external_id = '20103104adad9##'
     is_archived = False
     is_deleted = False
+
+
+class ArticleCommentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ArticleComment
+
+    comment_writer = fake.name()
+    article_commented = ArticleFactory()
+    text = fake.text()
+    commented_at = factory.Faker("date_time", tzinfo=timezone.utc)
+    updated_at = factory.Faker("date_time", tzinfo=timezone.utc)

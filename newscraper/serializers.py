@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Symbol, Article
+from .models import Symbol, Article, ArticleComment
 
 
 class SymbolSerializer(serializers.ModelSerializer):
@@ -51,5 +51,30 @@ class ArticleViewSerializer(serializers.ModelSerializer):
             "external_id",
             "is_archived",
             "is_deleted",
+        ]
+        depth = 1
+
+
+class ArticleCommentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ArticleComment
+        fields = [
+            "comment_writer",
+            "article_commented",
+            "text",
+            "commented_at",
+            "updated_at",
+        ]
+
+
+class ArticleCommentViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArticleComment
+        fields = [
+            "comment_writer",
+            "text",
+            "commented_at",
+            "updated_at",
         ]
         depth = 1
