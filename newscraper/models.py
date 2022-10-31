@@ -1,4 +1,9 @@
+import uuid
+
+from django.core.cache import cache
 from django.db import models
+from django.db.models import QuerySet, Manager
+from django.utils import timezone
 
 
 class GetOrNoneManager(models.Manager):
@@ -9,8 +14,20 @@ class GetOrNoneManager(models.Manager):
             return None
 
 
+class CustomQuerySet(QuerySet):
+    def update(self, **kwargs):
+        cache.delete('articles_all')
+        super(CustomQuerySet, self).update(updated_at=timezone.now(), **kwargs)
+
+
+class CustomManager(Manager):
+    def get_queryset(self):
+        return CustomQuerySet(self.model, using=self._db)
+
+
 class Symbol(models.Model):
     objects = GetOrNoneManager()
+    # objects = CustomManager()
     symbol = models.CharField(max_length=8, blank=False, null=False, default=None)
     is_enabled = models.BooleanField(default=True)
 
@@ -86,6 +103,7 @@ class Symbol(models.Model):
 
 class Article(models.Model):
     objects = GetOrNoneManager()
+    # objects = CustomManager()
     symbol = models.ForeignKey(Symbol, related_name='article_symbol', on_delete=models.DO_NOTHING)
     title = models.TextField(max_length=250, blank=False)
     text = models.CharField(max_length=10000, blank=False)
@@ -96,9 +114,67 @@ class Article(models.Model):
     is_deleted = models.BooleanField(default=False)
 
 
+def get_default_article():
+    return Article.objects.get_or_create(id=str(uuid.uuid4().fields[-1])[:5],
+                                         published_at='2013-03-16T17:41:28+00:00', symbol_id='1', text='Default',
+                                         title='Default', external_id='Def123')[0]
+
+
+def get_default_comment():
+    return ArticleComment.objects.get_or_create(id=str(uuid.uuid4().fields[-1])[:5],
+                                                commented_at='2013-03-16T17:41:28+00:00',
+                                                article_commented=get_default_article(), comment_writer='Default')[0]
+
+
 class ArticleComment(models.Model):
+    objects = GetOrNoneManager()
+    # objects = CustomManager()
     comment_writer = models.TextField(max_length=250, blank=False)
-    article_commented = models.ForeignKey(Article, related_name='article_comment', on_delete=models.DO_NOTHING)
+    article_commented = models.ForeignKey(Article, related_name='article_comment', on_delete=models.DO_NOTHING,
+                                          default=get_default_article)
     text = models.CharField(max_length=10000, blank=False, default="What a lame article!")
     commented_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now_add=True, null=True)
+    is_deleted = models.BooleanField(default=False)
+
+
+class ArticleReaction(models.Model):
+    objects = CustomManager()
+    like_reaction = 0
+    dislike_reaction = 1
+    REACTION_CHOICES = (
+        (like_reaction, 'Reacted with like.'),
+        (dislike_reaction, 'Reacted with dislike.'),
+    )
+    article = models.ForeignKey(Article, related_name='article_reacted', on_delete=models.DO_NOTHING,
+                                default=get_default_article)
+    reacted_at = models.DateTimeField(auto_now_add=True, null=True)
+    reaction = models.PositiveSmallIntegerField(
+        choices=REACTION_CHOICES
+    )
+
+
+class CommentReaction(models.Model):
+    objects = CustomManager()
+    like_reaction = 0
+    dislike_reaction = 1
+    REACTION_CHOICES = (
+        (like_reaction, 'Reacted with like.'),
+        (dislike_reaction, 'Reacted with dislike.'),
+    )
+    article = models.ForeignKey(Article, related_name='article_comment_reaction', on_delete=models.DO_NOTHING,
+                                default=get_default_article)
+    comment = models.ForeignKey(ArticleComment, related_name='comment_reacted', on_delete=models.DO_NOTHING,
+                                default=get_default_comment)
+    reacted_at = models.DateTimeField(auto_now_add=True, null=True)
+    reaction = models.PositiveSmallIntegerField(
+        choices=REACTION_CHOICES
+    )
+
+
+class Wordcount(models.Model):
+    objects = CustomManager()
+    word = models.CharField(max_length=50, blank=False)
+    count = models.IntegerField(blank=False)
+    updated_at = models.DateTimeField(auto_now_add=True, null=True)
+    is_keyword = models.BooleanField(default=False)

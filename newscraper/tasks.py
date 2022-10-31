@@ -4,10 +4,14 @@ from datetime import date, timedelta, datetime
 import requests
 from bs4 import BeautifulSoup
 from celery import shared_task
+
 from django.conf import settings
 
 from newscraper.celery import app
-from .models import Article, Symbol
+from newscraper.top_15_words.filter_string import filter_string
+from newscraper.top_15_words.map_reduce import map_string, reduce
+from newscraper.top_15_words.saver import save_to_db
+from .models import Article, Symbol, Wordcount
 from .serializers import ArticleSerializer
 
 today = date.today()
@@ -46,11 +50,14 @@ def collect_articles_yahoo() -> str:
 
                 existing_article = Article.objects.filter(external_id=article.get('external_id'),
                                                           symbol__is_enabled=True)
+                title = article.get('title')
+                count_words(title)
 
                 if not existing_article:
                     serializer = ArticleSerializer(data=article)
                     serializer.is_valid(raise_exception=True)
                     serializer.save()
+
                 else:
                     serializer = ArticleSerializer(instance=Article.objects.get(
                         external_id__exact=article.get('external_id'), symbol__is_enabled=True),
@@ -63,16 +70,14 @@ def collect_articles_yahoo() -> str:
 
 @shared_task(name='ArchiveArticles')
 def archive_articles(days=30) -> str:
-    last_month = today - timedelta(days=days)
-    Article.objects.filter(published_at__lte=last_month).update(is_archived=True)
+    Article.objects.filter(published_at__lte=today - timedelta(days=days)).update(is_archived=True)
 
     return "Done"
 
 
 @shared_task(name='DeleteArticles')
 def delete_articles(days=90) -> str:
-    last_three_months = today - timedelta(days=days)
-    Article.objects.filter(published_at__lte=last_three_months).update(is_deleted=True)
+    Article.objects.filter(published_at__lte=today - timedelta(days=days)).update(is_deleted=True)
 
     return "Done"
 
@@ -82,3 +87,24 @@ def purge_celery_queue() -> str:
     app.control.purge()
 
     return "Done"
+
+
+def count_words(title) -> str:
+    mapped = map_string(filter_string(title))
+    save_to_db(reduce(mapped))
+
+    return "Done"
+
+
+@shared_task(name='TopKeywords')
+def save_keywords(keywords=Wordcount.objects.all()):
+    my_dict = {}
+    for keyword in keywords:
+        my_dict[keyword.word] = keyword.count
+
+    top_15_keywords = sorted(my_dict, key=my_dict.get, reverse=True)[:15]
+
+    for keyword in top_15_keywords:
+        top_15_keywords = Wordcount.objects.filter(word=keyword).update(is_keyword=True)
+
+    return top_15_keywords

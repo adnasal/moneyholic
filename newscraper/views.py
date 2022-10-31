@@ -1,8 +1,10 @@
+import calendar
 import logging
 from datetime import datetime, timedelta
-from django.conf import settings
-from django.core.cache.backends.base import DEFAULT_TIMEOUT
-from django.db.models import Q
+from time import strptime
+
+from django.core.cache import cache
+from django.db.models import Q, Count
 from rest_framework import pagination
 from rest_framework import status, filters, serializers, fields
 from rest_framework.generics import (
@@ -13,13 +15,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from newscraper.tasks import collect_articles_yahoo
-from .models import Symbol, Article, ArticleComment
-from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer, ArticleCommentSerializer, ArticleCommentViewSerializer
-
-CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
+from .models import Symbol, Article, ArticleComment, ArticleReaction, CommentReaction, Wordcount
+from .serializers import SymbolSerializer, ArticleViewSerializer, SymbolViewSerializer, ArticleCommentSerializer, \
+    ArticleCommentViewSerializer, ArticleReactionSerializer, ArticleReactionViewSerializer, CommentReactionSerializer, \
+    CommentReactionViewSerializer, WordcountSerializer
+from .tasks import save_keywords
 
 logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
+
+today = datetime.now()
 
 
 class CustomPagination(pagination.PageNumberPagination):
@@ -36,6 +41,9 @@ class ValidateQueryParams(serializers.Serializer):
     date = fields.DateField(format='%Y-%m-%d', required=False)
     date_from = fields.DateField(format='%Y-%m-%d', required=False)
     date_to = fields.DateField(format='%Y-%m-%d', required=False)
+    pk = fields.RegexField("^[\u0621-\u064A\u0660-\u0669 0-9]{3,30}$", required=False)
+    day = fields.IntegerField(min_value=1, max_value=30, required=False)
+    year = fields.IntegerField(min_value=1990, max_value=today.year, required=False)
 
 
 class SymbolListView(ListAPIView):
@@ -44,80 +52,79 @@ class SymbolListView(ListAPIView):
     ordering = ['-id']
     pagination_class = CustomPagination
 
-
     def get_queryset(self, *args, **kwargs):
-        queryset = Symbol.objects.filter(is_enabled=True)
+        symbols = cache.get_or_set('enabled_symbols',
+                                   Symbol.objects.filter(is_enabled=True).only('symbol', 'symbol_class'))
 
-        return queryset
+        return symbols
 
 
 class SymbolRemoveView(GenericAPIView):
     permission_classes = [IsAdminUser]
     queryset = Symbol.objects.all()
 
-
     def post(self):
 
-        to_delete = self.request.data['symbol_id']
-        queryset = Symbol.objects.filter(id=to_delete)
+        queryset = Symbol.objects.filter(id=self.request.data['symbol_id']).only('symbol')
 
-        if not queryset:
-            return Response({'Failure': 'Symbol already deleted.'}, status.HTTP_404_NOT_FOUND)
-        else:
+        if queryset.exists():
+
             if queryset in {'AAPL', 'TWTR', 'GC=F', 'INTC'}:
                 return Response(
                     data={
                         "message": "You cannot delete this symbol."
                     },
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-            else:
-                queryset.delete()
 
-                return Response(
-                    data={
-                        "message": "You have successfully deleted desired symbol."
-                    },
-                    status=status.HTTP_200_OK
-                )
+            queryset.delete()
+
+            return Response(
+                data={
+                    "message": "You have successfully deleted desired symbol."
+                },
+                status=status.HTTP_200_OK
+            )
+
+        return Response({'Failure': 'Symbol already deleted.'}, status.HTTP_404_NOT_FOUND)
 
 
 class SymbolAddView(CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = SymbolSerializer
 
-
     def create(self, request, **kwargs):
+        queryset = Symbol.objects.filter(symbol=self.request.data['symbol'])
 
-        to_create = self.request.data['symbol']
-        queryset = Symbol.objects.filter(symbol=to_create)
-
-        if not queryset:
-            serializer = SymbolSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-
-            return Response(serializer.validated_data, status.HTTP_201_CREATED)
-        else:
+        if queryset.exists():
             return Response({'Failure': 'Symbol already exists.'}, status.HTTP_200_OK)
+
+        serializer = SymbolSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.validated_data, status.HTTP_201_CREATED)
 
 
 class SymbolUpdateView(APIView):
     permission_classes = [AllowAny]
     serializer_class = SymbolSerializer
 
-    def put(self, request, pk):
+    def put(self, request):
         try:
-            Symbol.objects.get(pk=pk)
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            Symbol.objects.get(pk=param)
         except Symbol.DoesNotExist:
             return Response({'Failure': 'Symbol does not exist.'},
                             status.HTTP_404_NOT_FOUND)
-        else:
-            serializer = SymbolSerializer(instance=get_object_or_404(Symbol, pk=pk), data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
 
-            return Response(serializer.validated_data, status.HTTP_202_ACCEPTED)
+        serializer = SymbolSerializer(instance=get_object_or_404(Symbol, pk=param), data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.validated_data, status.HTTP_202_ACCEPTED)
 
 
 class ArticleListView(ListAPIView):
@@ -128,14 +135,14 @@ class ArticleListView(ListAPIView):
     search_fields = ['title', 'text', 'published_at']
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
 
-    # @cache_page(CACHE_TTL)
     def get_queryset(self, *args, **kwargs):
         param = self.request.query_params
 
         query_params = ValidateQueryParams(data=param)
         query_params.is_valid(raise_exception=True)
 
-        queryset = Article.objects.filter(is_archived=False, is_deleted=False).order_by('symbol_id')
+        queryset = Article.objects.filter(is_archived=False, is_deleted=False).order_by('symbol_id').select_related(
+            'symbol').defer('external_id')
         symbols = Symbol.objects.filter(is_enabled=True)
         symbol = symbols.values_list('symbol', flat=True)
         symbol_class = symbols.values_list('symbol_class', flat=True)
@@ -163,13 +170,14 @@ class ArticleListView(ListAPIView):
             for symbol in symbol_id:
                 query_set = queryset.filter(symbol=symbol)
         elif param.get('symbol') is not None and param.get('symbol') in symbol:
-            symbol_id = Symbol.objects.get(symbol=param.get('symbol'))
+            symbol_id = Symbol.objects.filter(symbol=param.get('symbol'))
 
             print(param.get('symbol'))
-            query_set = queryset.filter(symbol=symbol_id)
+            for symbol in symbol_id:
+                query_set = queryset.filter(symbol=symbol)
 
         else:
-            query_set = queryset.all()
+            query_set = queryset
 
         return query_set
 
@@ -178,90 +186,82 @@ class ArticleView(GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArticleViewSerializer
 
-    # def recently_viewed(request, post_id):
-    #    session = None
-    #   if not "recently_viewed" in request.session:
-    #      request.session["recently_viewed"] = []
-    #     request.session["recently_viewed"].append(post_id)
-    # else:
-    #   if post_id in request.session["recently_viewed"]:
-    #      request.session["recently_viewed"].remove(post_id)
-    # request.session["recently_viewed"].insert(0, post_id)
-    # if len(request.session["recently_viewed"]) > 5:
-    #   request.session["recently_viewed"].pop()
-    # request.session.modified = True
-
-    def get(self, request, pk=None):
+    def get(self, request):
         try:
-            Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            article = Article.objects.get(pk=param, is_archived=False, is_deleted=False).defer('external_id')
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
-        else:
-            # self.recently_viewed(pk)
-            # recently_viewed_qs = Article.objects.filter(pk__in=request.session.get("recently_viewed", []))
-            # recently_viewed_qs = sorted(recently_viewed_qs, key=lambda x: request.session[x.id])
-            article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
-            serializer = ArticleViewSerializer(article)
-            data = serializer.data
 
-            return Response(data, content_type="application/json")
+        serializer = ArticleViewSerializer(article)
+        data = serializer.data
+
+        return Response(data, content_type="application/json")
 
 
 class ArticleRemoveView(DestroyAPIView):
     permission_classes = [IsAdminUser]
     queryset = Article.objects.all()
 
-    def delete(self, request, pk=None, **kwargs):
+    def delete(self, request, **kwargs):
         try:
-            Article.objects.get(pk=pk, is_deleted=True)
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            article = Article.objects.get(pk=param, is_deleted=True).defer('external_id')
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist or has been already removed.'},
                             status=status.HTTP_404_NOT_FOUND)
-        else:
-            response = Article.objects.get_or_none(id=pk, is_archived=False, is_deleted=False)
-            response.delete()
-            return Response(
-                data={
-                    "message": "You have successfully deleted desired article."
-                },
-                status=status.HTTP_200_OK
-            )
+        response = article
+        response.delete()
+        return Response(
+            data={
+                "message": "You have successfully deleted desired article."
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 class ArticleArchiveView(DestroyAPIView):
     permission_classes = [AllowAny]
     queryset = Article.objects.all()
 
-    def put(self, request, pk):
+    def put(self, request):
         try:
-            Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            article = Article.objects.get(pk=param, is_archived=False, is_deleted=False).defer('external_id')
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'},
                             status=status.HTTP_404_NOT_FOUND)
-        else:
-            article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
-            article.is_archived = True
-            article.save(update_fields=['is_archived'])
+        new_article = article
+        new_article.is_archived = True
+        new_article.save(update_fields=['is_archived'])
 
-        return Response({f'Article archived: {article.is_archived} '}, status=status.HTTP_202_ACCEPTED)
+        return Response({f'Article archived: {new_article.is_archived} '}, status=status.HTTP_202_ACCEPTED)
 
 
 class ArticleDeleteView(DestroyAPIView):
     permission_classes = [AllowAny]
     queryset = Article.objects.all()
 
-    def put(self, request, pk):
+    def put(self, request):
         try:
-            Article.objects.get(pk=pk, is_deleted=False)
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            article = Article.objects.get(pk=param, is_deleted=False).defer('external_id')
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'},
                             status.HTTP_404_NOT_FOUND)
-        else:
-            article = Article.objects.get(pk=pk, is_deleted=False)
-            article.is_deleted = True
-            article.save(update_fields=['is_deleted'])
+        new_article = article
+        new_article.is_deleted = True
+        new_article.save(update_fields=['is_deleted'])
 
-        return Response({f'Article deleted: {article.is_deleted} '}, status=status.HTTP_202_ACCEPTED)
+        return Response({f'Article deleted: {new_article.is_deleted} '}, status=status.HTTP_202_ACCEPTED)
 
 
 class ArticleRecentNewsView(ListAPIView):
@@ -274,10 +274,10 @@ class ArticleRecentNewsView(ListAPIView):
     yesterday = today - timedelta(days=1)
 
     def initial_scrape(self):
-        data = Article.objects.filter(published_at__range=[self.yesterday, self.today])
+        data = Article.objects.filter(published_at__range=[self.yesterday, today]).defer('external_id')
         while not data:
             collect_articles_yahoo()
-            data = Article.objects.filter(published_at__range=[self.yesterday, self.today])
+            data = Article.objects.filter(published_at__range=[self.yesterday, today]).defer('external_id')
             if data:
                 break
 
@@ -285,7 +285,7 @@ class ArticleRecentNewsView(ListAPIView):
 
     def get_queryset(self, *args, **kwargs):
 
-        queryset = self.initial_scrape()
+        queryset = self.initial_scrape().select_related('symbol')
 
         return queryset
 
@@ -297,8 +297,8 @@ class DeletedArticlesView(ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
-        queryset = Article.objects.filter(is_deleted=True)
-        return queryset
+        deleted_articles = cache.get_or_set('deleted_articles', Article.objects.filter(is_deleted=True).defer('external_id'))
+        return deleted_articles
 
 
 class ArchivedArticlesView(ListAPIView):
@@ -308,8 +308,8 @@ class ArchivedArticlesView(ListAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self, *args, **kwargs):
-        queryset = Article.objects.filter(is_archived=True)
-        return queryset
+        archived_articles = cache.get_or_set('archived_articles', Article.objects.filter(is_archived=True).defer('external_id'))
+        return archived_articles
 
 
 class CommentAddView(CreateAPIView):
@@ -318,40 +318,268 @@ class CommentAddView(CreateAPIView):
 
     def create(self, request, **kwargs):
         try:
-            param = self.request.query_params
-            if param.get('pk') is not None:
-                Article.objects.get(pk=param.get('pk'))
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            if param is not None:
+                article = Article.objects.get(pk=param, is_deleted=False).defer('external_id')
             else:
                 return Response({'Failure': 'Please choose which article you want to comment.'},
-                                status.HTTP_404_NOT_FOUND)
+                                status.HTTP_400_BAD_REQUEST)
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'},
                             status.HTTP_404_NOT_FOUND)
-        else:
-            serializer = ArticleCommentSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            data = serializer.data
+        serializer = ArticleCommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-            return Response(data, content_type="application/json")
+        comment = ArticleComment.objects.last()
+        comment.article_commented = article
+        comment.save(update_fields=['article_commented'])
+
+        serializer.save()
+        data = serializer.data
+
+        return Response(data, content_type="application/json")
 
 
-class ArticleViewComments(GenericAPIView):
+class ArticleViewComments(ListAPIView):
     permission_classes = [AllowAny]
-    serializer_class = ArticleViewSerializer
+    serializer_class = ArticleCommentViewSerializer
+    ordering = ['-id']
+    pagination_class = CustomPagination
 
-    def get(self, request, pk=None):
+    def get_queryset(self, *args, **kwargs):
         try:
-            Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            comments = ArticleComment.objects.filter(article_commented__id=param, article_commented__is_deleted=False)
+            return comments
         except Article.DoesNotExist:
             return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
-        else:
-            comment_array = []
-            article = Article.objects.get(pk=pk, is_archived=False, is_deleted=False)
-            comments = ArticleComment.objects.filter(article_commented=article)
-            for comment in comments:
-                serializer = ArticleCommentViewSerializer(comment)
-                data = serializer.data
-                comment_array.append(data)
 
-            return Response(comment_array, content_type="application/json")
+
+class CommentRemoveView(DestroyAPIView):
+    permission_classes = [AllowAny]
+    queryset = ArticleComment.objects.all()
+
+    def delete(self, request, **kwargs):
+        try:
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            comment = ArticleComment.objects.get(pk=param, is_deleted=False)
+        except ArticleComment.DoesNotExist:
+            return Response({'Failure': 'Comment does not exist or has been already removed.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        new_comment = comment
+        new_comment.is_deleted = True
+        new_comment.save(update_fields=['is_deleted'])
+
+        return Response({f'Comment deleted: {new_comment.is_deleted} '}, status=status.HTTP_202_ACCEPTED)
+
+
+class ArticleReactionAddView(CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleReactionSerializer
+
+    def create(self, request, **kwargs):
+        try:
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+
+            article = Article.objects.get(pk=param, is_deleted=False).defer('external_id')
+
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'},
+                            status.HTTP_200_OK)
+
+        serializer = ArticleReactionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        reaction = ArticleReaction.objects.last()
+        reaction.article = article
+        reaction.save(update_fields=['article'])
+
+        return Response(serializer.data, content_type="application/json")
+
+
+class ArticleReactionView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = ArticleReactionViewSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        try:
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            reactions = ArticleReaction.objects.filter(article__id=param, article__is_archived=False,
+                                                       article__is_deleted=False)
+            return reactions
+        except Article.DoesNotExist:
+            return Response({'Failure': 'Article does not exist.'}, status.HTTP_404_NOT_FOUND)
+
+
+class CommentReactionAddView(CreateAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = CommentReactionSerializer
+
+    def create(self, request, **kwargs):
+        try:
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            else:
+                return Response({'Failure': 'Please choose which comment you want to react on.'},
+                                status.HTTP_400_BAD_REQUEST)
+        except ArticleComment.DoesNotExist:
+            return Response({'Failure': 'Comment does not exist.'},
+                            status.HTTP_404_NOT_FOUND)
+
+        obj = ArticleComment.objects.get(pk=param)
+        serializer = CommentReactionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        reaction = CommentReaction.objects.last()
+
+        field_object = ArticleComment._meta.get_field('article_commented')
+        field_value = field_object.value_from_object(obj)
+
+        reaction.article = Article.objects.get(pk=field_value, is_deleted=False).defer('external_id')
+        reaction.comment = obj
+        reaction.save(update_fields=['article', 'comment'])
+
+        return Response(serializer.data, content_type="application/json")
+
+
+class CommentReactionView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = CommentReactionViewSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        try:
+            param = self.request.query_params.get('pk', default=None)
+            if param is None:
+                return Response('Please add primary key.')
+            reactions = CommentReaction.objects.filter(comment__id=param, comment__is_deleted=False)
+            return reactions
+        except ArticleComment.DoesNotExist:
+            return Response({'Failure': 'Comment does not exist.'}, status.HTTP_404_NOT_FOUND)
+
+
+class WordcountListView(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = WordcountSerializer
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        wordcount = Wordcount.objects.all().defer('is_keyword')
+
+        return wordcount
+
+
+class Top15Keywords(ListAPIView):
+    permission_classes = [AllowAny]
+    serializer_class = WordcountSerializer
+    ordering = ['-id']
+    pagination_class = CustomPagination
+
+    today = datetime.now()
+
+    def get(self, request):
+        param = self.request.query_params
+        queryset = Wordcount.objects.all().defer('is_keyword')
+
+        query_params = ValidateQueryParams(data=param)
+        query_params.is_valid(raise_exception=True)
+
+        if param.get('last_week') is not None:
+
+            query_set = queryset.filter(updated_at__gte=today - timedelta(days=today.weekday(), weeks=1))
+
+        elif param.get('day') is not None:
+
+            day_final = today - timedelta(days=int(param.get('day')))
+            query_set = queryset.filter(updated_at__gte=day_final, updated_at__lte=day_final)
+
+        elif param.get('month') and param.get('year') is not None:
+
+            month = param.get('month')
+            months = [calendar.month_name[i] for i in range(1, 12)]
+            months_int = list(range(1, 12))
+
+            if len(month) > 2 and month in months:
+                month = strptime(month, '%B').tm_mon
+            elif len(month) > 2 and month not in months:
+                return Response('Please type in month correctly either as number or in Month format.')
+            elif len(month) < 2 and month not in months_int:
+                return Response('Please enter a valid number.')
+
+            query_set = queryset.filter(updated_at__month=month)
+
+        elif param.get('year') is not None:
+
+            query_set = queryset.filter(updated_at__year=param.get('year'))
+
+        elif param.get('all') is not None:
+
+            query_set = queryset
+
+        else:
+            return Response('Please check your parameters.')
+
+        return Response(save_keywords(query_set), content_type="application/json")
+
+
+class ArticleMostLikes(GenericAPIView):
+    permission_classes = [AllowAny]
+    ordering = ['-id']
+    pagination_class = CustomPagination
+
+    def get(self, *args, **kwargs):
+        articles = Article.objects.all().defer('external_id')
+        my_dict = {}
+
+        for article in articles:
+            my_dict[article.title] = ArticleReaction.objects.filter(reaction=0, article=article).count()
+
+        top_5_articles = sorted(my_dict.items(), key=lambda x: x[1])[:5]
+        return Response(top_5_articles, content_type="application/json")
+
+
+class CommentMostLikes(GenericAPIView):
+    permission_classes = [AllowAny]
+    ordering = ['-id']
+    pagination_class = CustomPagination
+
+    def get(self, *args, **kwargs):
+        comments = ArticleComment.objects.all().defer('external_id')
+        my_dict = {}
+
+        for comment in comments:
+            my_dict[comment.text] = CommentReaction.objects.filter(reaction=0, comment=comment).count()
+
+        top_5_comments = sorted(my_dict.items(), key=lambda x: x[1])[:5]
+        return Response(top_5_comments, content_type="application/json")
+
+
+class ArticleMostComments(GenericAPIView):
+    permission_classes = [AllowAny]
+    ordering = ['-id']
+    pagination_class = CustomPagination
+
+    def get(self, *args, **kwargs):
+        my_dict = {}
+
+        comments = ArticleComment.objects.annotate(comment_count=Count('article_commented'))
+
+        for comment in comments:
+            my_dict[comment.text] = comment.comment_count
+
+        top_5_most_commented_articles = sorted(my_dict.items(), key=lambda x: x[1])[:5]
+        return Response(top_5_most_commented_articles, content_type="application/json")
