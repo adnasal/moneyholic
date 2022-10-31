@@ -19,7 +19,9 @@ CMD ["sh", "/entrypoint-web.sh"]
 COPY ./docker/ /
 
 COPY ./requirements/ ./requirements
-RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.1.12
+
+
 ENV PATH="/root/.local/bin:$PATH"
 COPY poetry.lock pyproject.toml ./
 RUN poetry config virtualenvs.create false
