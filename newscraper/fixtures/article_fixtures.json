@@ -1,0 +1,47 @@
+[
+{
+  "model": "newscraper.Article",
+  "fields": {
+    "id": "1",
+    "symbol": "1",
+    "title": "My Fixture Article",
+    "text": "My Fixture Text.",
+    "published_at": "2013-03-16T17:41:28+00:00",
+    "article_link": "fixlink.com",
+    "external_id": "FiX#",
+    "is_archived": "False",
+    "is_deleted": "False"
+  }
+},
+{
+  "model": "newscraper.ArticleReaction",
+  "fields": {
+    "id": "1",
+    "article": "1",
+    "reacted_at": "2013-03-16T17:41:28+00:00",
+    "reaction": "0"
+  }
+},
+{
+  "model": "newscraper.CommentReaction",
+  "fields": {
+    "id": "1",
+    "article": "1",
+    "comment": "1",
+    "reacted_at": "2013-03-16T17:41:28+00:00",
+    "reaction": "0"
+  }
+},
+{
+  "model": "newscraper.ArticleComment",
+  "fields": {
+    "id": "1",
+    "comment_writer": "Fixture Fix",
+    "article_commented": "1",
+    "text": "My Fixture Text.",
+    "commented_at": "2013-03-16T17:41:28+00:00",
+    "updated_at": "2013-03-16T17:41:28+00:00",
+    "is_deleted": "False"
+  }
+}
+]
